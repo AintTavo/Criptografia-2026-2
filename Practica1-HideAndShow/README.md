@@ -2,12 +2,14 @@
 
 La practica es aplicar conceptos de estenografia para implementar con manipulación de bits el en un bmp de 24 bits ocultar una contraseña. !!!!!Sin sobreescrobir los archivos!!!!.
 
-No guardar el resultado de la and sino aplicarlo directamente a la imagen
+No guardar el resultado de la and sino aplicarlo directamente a la imagen.
 
-Añadir todes para los datos de la contraseña 0x03 y 0xFC
+No tocar los primeros 54 bytes del bmp, este es el encabezado de un bmp.
 
-En este caso se ocultara en el valor menos significativo de los colores del BMP (RGB, cada uno 1 byte). Debe tener 
-No guardar el resultado 
+Añadir todes para los datos de la contraseña 0x03 y 0xFC.
+
+En este caso se ocultara en el valor menos significativo de los colores del BMP (RGB, cada uno 1 byte). Debe tener
+No guardar el resultado.
 ## Propuesta de solución
 
 Pasos del programa
