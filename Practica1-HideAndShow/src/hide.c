@@ -2,30 +2,70 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define OK 0
+#define ARG_ERR 2
+#define FILE_ERR 3
+
 int main(int argc, char *argv[]) {
     
     FILE *file_txt = NULL;
     FILE *file_bmp = NULL;
 
-    // Manejo de argumentos
+    char *path_txt;
+    char *path_bmp;
+
+    // ------------------------ Manejo de argumentos ------------------------------
     if (argc != 2) {
         for (int i = 1; i < argc; i++){
             if (strstr(argv[i],".txt") != NULL){
-                printf("Archivo txt: [ %d, %s]\n", i, argv[i]);
+                file_txt = fopen(argv[i], "r");
+                path_txt = malloc((strlen(argv[i]) + 1) * sizeof(char));
+                strcpy(path_txt, argv[i]);
             }
             else if (strstr(argv[i], ".bmp") != NULL){
-                printf("Archivo bmp: [ %d, %s]\n", i, argv[i]);
+                file_bmp = fopen(argv[i], "r");
+                path_bmp = malloc((strlen(argv[i]) + 1) * sizeof(char));
+                strcpy(path_bmp, argv[i]);
+            }
+            else {
+                perror("Error: Uno de los dos documentos no es del tipo soportado\n");
+                return ARG_ERR;
             }
         }
     }
     else {
-        perror("El program requiere del uso de dos argumentos:\n");
+        perror("Error: El programa requiere del uso de dos argumentos:\n");
         perror("\t1. Un archivo txt\n");
         perror("\t2. Una imagen bmp\n");
-        return 1;
+        return ARG_ERR;
     }
 
+    // ------------------------- Manejo de errores en argumentos ---------------------------------
+    if (file_txt == NULL){
+        perror("Error: Documento de texto inexistente\n");
+        return FILE_ERR;
+    }
+    if(file_bmp == NULL){
+        perror("Error: Documento bmp inexistente\n");
+        return FILE_ERR;
+    }
+
+    // ------------------------- Creacion de documento con seccion oculta ------------------------
+    char *path_new_file = malloc((strlen(path_bmp) + 8) * sizeof(char));
+    strcpy(path_new_file, path_bmp); 
+    char *last_dot = strrchr(path_new_file, '.');
+    *last_dot = '\0';
+    sprintf(path_new_file,"%s_secret.bmp", path_new_file);
+
+    fopen(path_new_file, "w+");
+    
+    
+   
+    
+    free(path_new_file);
+    free(path_txt);
+    free(path_bmp);
     fclose(file_txt);
     fclose(file_bmp);
-    return 0;
+    return OK;
 }
