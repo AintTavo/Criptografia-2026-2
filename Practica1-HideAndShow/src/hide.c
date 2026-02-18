@@ -57,15 +57,18 @@ int main(int argc, char *argv[]) {
     *last_dot = '\0';
     sprintf(path_new_file,"%s_secret.bmp", path_new_file);
 
-    fopen(path_new_file, "w+");
+    FILE *file_secret = fopen(path_new_file, "w+");
     
     
    
-    
+    // ----------------------- Cierre memoria dinamica ------------------------------------
     free(path_new_file);
     free(path_txt);
     free(path_bmp);
+
+    // ---------------------- cierre punteros a archivos ---------------------------------
     fclose(file_txt);
     fclose(file_bmp);
+    fclose(file_secret);
     return OK;
 }
