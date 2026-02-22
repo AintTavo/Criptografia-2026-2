@@ -5,6 +5,7 @@
 #define OK 0
 #define ARG_ERR 2
 #define FILE_ERR 3
+#define LENG_ERR 4
 
 int main(int argc, char *argv[]) {
     
@@ -15,15 +16,15 @@ int main(int argc, char *argv[]) {
     char *path_bmp;
 
     // ------------------------ Manejo de argumentos ------------------------------
-    if (argc != 2) {
+    if (argc == 3) {
         for (int i = 1; i < argc; i++){
             if (strstr(argv[i],".txt") != NULL){
-                file_txt = fopen(argv[i], "r");
+                file_txt = fopen(argv[i], "rb");
                 path_txt = malloc((strlen(argv[i]) + 1) * sizeof(char));
                 strcpy(path_txt, argv[i]);
             }
             else if (strstr(argv[i], ".bmp") != NULL){
-                file_bmp = fopen(argv[i], "r");
+                file_bmp = fopen(argv[i], "rb");
                 path_bmp = malloc((strlen(argv[i]) + 1) * sizeof(char));
                 strcpy(path_bmp, argv[i]);
             }
@@ -57,9 +58,46 @@ int main(int argc, char *argv[]) {
     *last_dot = '\0';
     sprintf(path_new_file,"%s_secret.bmp", path_new_file);
 
-    FILE *file_secret = fopen(path_new_file, "w+");
+    FILE *file_secret = fopen(path_new_file, "wb+");
+
+
+    // -------------------------- Lectura y escritura de archivos --------------------------
+    int bmp_char;
+    int txt_char;
+
+    // Translado de encabezado maximo de un bmp
+    for (int  i = 0 ; i < 138 ; i++){
+        bmp_char = fgetc(file_bmp);
+        if ( bmp_char == EOF ){
+            perror("Error(Header): Longitud del BMP insuficiente\n");
+            return LENG_ERR;
+        }
+        fputc(bmp_char, file_secret);
+    }
     
-    
+    // Grabado de contraseña
+    while (( txt_char = fgetc(file_txt) ) != EOF ){
+        for ( int i = 0 ; i < 8 ; i++ ){
+
+            bmp_char = fgetc(file_bmp);
+            if ( bmp_char == EOF ) {
+                perror("Error(Hiding): Longitud del BMP insuficiente\n");
+                return LENG_ERR;
+            }
+
+            if (( txt_char & 0x80 ) == 0x80)
+                fputc((( txt_char & 0xFE ) + 0x01 ) , file_secret );
+            else
+                fputc(( txt_char & 0xFE ) , file_secret );
+
+            txt_char = txt_char << 1;
+        }
+    }
+
+    // Translado del resto del archivo bmp
+    while (( bmp_char = fgetc(file_bmp) ) != EOF ){
+        fputc( bmp_char, file_secret );
+    }
    
     // ----------------------- Cierre memoria dinamica ------------------------------------
     free(path_new_file);
