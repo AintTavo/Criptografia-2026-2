@@ -17,15 +17,15 @@ int main ( int argc, char *argv[] ) {
     char *path_bmp;
 
     // ------------------------ Manejo de argumentos ------------------------------
-    if (argc == 3) {
-        for (int i = 1; i < argc; i++){
-            if (strstr(argv[i],".txt") != NULL){
-                file_txt = fopen(argv[i], "rb");
+    if ( argc == 3 ) {
+        for ( int i = 1 ; i < argc ; i++ ){
+            if ( strstr( argv[i],".txt") != NULL ){
+                file_txt = fopen( argv[i], "rb" );
             }
-            else if (strstr(argv[i], ".bmp") != NULL){
-                file_bmp = fopen(argv[i], "rb");
-                path_bmp = malloc((strlen(argv[i]) + 1) * sizeof(char));
-                strcpy(path_bmp, argv[i]);
+            else if ( strstr( argv[i], ".bmp" ) != NULL ){
+                file_bmp = fopen( argv[i], "rb" );
+                path_bmp = malloc(( strlen(argv[i]) + 1 ) * sizeof(char) );
+                strcpy( path_bmp , argv[i] );
             }
             else {
                 perror("Error(Arg) : Uno de los dos documentos no es del tipo soportado\n");
@@ -41,11 +41,11 @@ int main ( int argc, char *argv[] ) {
     }
 
     // ------------------------- Manejo de errores en argumentos ---------------------------------
-    if (file_txt == NULL){
+    if ( file_txt == NULL ){
         perror("Error(File) : Documento de texto inexistente\n");
         return FILE_ERR;
     }
-    if(file_bmp == NULL){
+    if( file_bmp == NULL ){
         perror("Error(File) : Documento bmp inexistente\n");
         return FILE_ERR;
     }
@@ -73,6 +73,25 @@ int main ( int argc, char *argv[] ) {
         }
         fputc(bmp_char, file_secret);
     }
+
+    // Grabado de header del secreto
+    txt_char = 0x03;
+    for( int i = 0 ; i < 8 ; i++ ){
+
+        bmp_char = fgetc(file_bmp);
+        if ( bmp_char == EOF ) {
+            perror("Error(Hiding) : Longitud del BMP insuficiente\n");
+            return LENG_ERR;
+        }
+
+        if (( txt_char & 0x80 ) == 0x80)
+            fputc(( bmp_char | 0x01 ) , file_secret );
+        else
+            fputc(( bmp_char & 0xFE ) , file_secret );
+
+        txt_char = txt_char << 1;
+
+    }
     
     // Grabado de contraseña
     while (( txt_char = fgetc(file_txt) ) != EOF ){
@@ -85,12 +104,31 @@ int main ( int argc, char *argv[] ) {
             }
 
             if (( txt_char & 0x80 ) == 0x80)
-                fputc((( txt_char & 0xFE ) + 0x01 ) , file_secret );
+                fputc(( bmp_char | 0x01 ) , file_secret );
             else
-                fputc(( txt_char & 0xFE ) , file_secret );
+                fputc(( bmp_char & 0xFE ) , file_secret );
 
             txt_char = txt_char << 1;
         }
+    }
+
+    // Grabado de footer del secreto
+    txt_char = 0x03;
+    for( int i = 0 ; i < 8 ; i++ ){
+
+        bmp_char = fgetc(file_bmp);
+        if ( bmp_char == EOF ) {
+            perror("Error(Hiding) : Longitud del BMP insuficiente\n");
+            return LENG_ERR;
+        }
+
+        if (( txt_char & 0x80 ) == 0x80)
+            fputc(( bmp_char | 0x01 ) , file_secret );
+        else
+            fputc(( bmp_char & 0xFE ) , file_secret );
+
+        txt_char = txt_char << 1;
+
     }
 
     // Translado del resto del archivo bmp
