@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define OK 0
-#define ARG_ERR 2
-#define FILE_ERR 3
-#define LENG_ERR 4
+
+// Constantes de error
+#define OK 0        // Termino correctamente la ejecución
+#define ARG_ERR 2   // Argumentos de entrada incorrectos
+#define FILE_ERR 3  // Archivos sin contenido o inexistentes
+#define LENG_ERR 4  // Longitud del archivo BMP insuficiente para ocultar el mensaje
 
 int main(int argc, char *argv[]) {
     
