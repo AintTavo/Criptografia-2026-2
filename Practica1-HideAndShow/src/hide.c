@@ -4,17 +4,16 @@
 
 
 // Constantes de error
-#define OK 0        // Termino correctamente la ejecución
-#define ARG_ERR 2   // Argumentos de entrada incorrectos
-#define FILE_ERR 3  // Archivos sin contenido o inexistentes
-#define LENG_ERR 4  // Longitud del archivo BMP insuficiente para ocultar el mensaje
+#define OK          0   // Termino correctamente la ejecución
+#define ARG_ERR     2   // Argumentos de entrada incorrectos
+#define FILE_ERR    3   // Archivos sin contenido o inexistentes
+#define LENG_ERR    4   // Longitud del archivo BMP insuficiente para ocultar el mensaje
 
-int main(int argc, char *argv[]) {
+int main ( int argc, char *argv[] ) {
     
     FILE *file_txt = NULL;
     FILE *file_bmp = NULL;
 
-    char *path_txt;
     char *path_bmp;
 
     // ------------------------ Manejo de argumentos ------------------------------
@@ -22,8 +21,6 @@ int main(int argc, char *argv[]) {
         for (int i = 1; i < argc; i++){
             if (strstr(argv[i],".txt") != NULL){
                 file_txt = fopen(argv[i], "rb");
-                path_txt = malloc((strlen(argv[i]) + 1) * sizeof(char));
-                strcpy(path_txt, argv[i]);
             }
             else if (strstr(argv[i], ".bmp") != NULL){
                 file_bmp = fopen(argv[i], "rb");
@@ -31,13 +28,13 @@ int main(int argc, char *argv[]) {
                 strcpy(path_bmp, argv[i]);
             }
             else {
-                perror("Error: Uno de los dos documentos no es del tipo soportado\n");
+                perror("Error(Arg) : Uno de los dos documentos no es del tipo soportado\n");
                 return ARG_ERR;
             }
         }
     }
     else {
-        perror("Error: El programa requiere del uso de dos argumentos:\n");
+        perror("Error(Arg) : El programa requiere del uso de dos argumentos:\n");
         perror("\t1. Un archivo txt\n");
         perror("\t2. Una imagen bmp\n");
         return ARG_ERR;
@@ -45,11 +42,11 @@ int main(int argc, char *argv[]) {
 
     // ------------------------- Manejo de errores en argumentos ---------------------------------
     if (file_txt == NULL){
-        perror("Error: Documento de texto inexistente\n");
+        perror("Error(File) : Documento de texto inexistente\n");
         return FILE_ERR;
     }
     if(file_bmp == NULL){
-        perror("Error: Documento bmp inexistente\n");
+        perror("Error(File) : Documento bmp inexistente\n");
         return FILE_ERR;
     }
 
@@ -71,7 +68,7 @@ int main(int argc, char *argv[]) {
     for (int  i = 0 ; i < 138 ; i++){
         bmp_char = fgetc(file_bmp);
         if ( bmp_char == EOF ){
-            perror("Error(Header): Longitud del BMP insuficiente\n");
+            perror("Error(Header) : Longitud del BMP insuficiente\n");
             return LENG_ERR;
         }
         fputc(bmp_char, file_secret);
@@ -83,7 +80,7 @@ int main(int argc, char *argv[]) {
 
             bmp_char = fgetc(file_bmp);
             if ( bmp_char == EOF ) {
-                perror("Error(Hiding): Longitud del BMP insuficiente\n");
+                perror("Error(Hiding) : Longitud del BMP insuficiente\n");
                 return LENG_ERR;
             }
 
@@ -103,7 +100,6 @@ int main(int argc, char *argv[]) {
    
     // ----------------------- Cierre memoria dinamica ------------------------------------
     free(path_new_file);
-    free(path_txt);
     free(path_bmp);
 
     // ---------------------- cierre punteros a archivos ---------------------------------
