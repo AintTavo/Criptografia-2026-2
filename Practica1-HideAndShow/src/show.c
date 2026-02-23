@@ -61,6 +61,7 @@ int main ( int argc, char *argv[] ) {
         if ( count == 8 ){
 
             if(tmp_secret_byte == 0x03 && flag_message == 1){
+                pos_secret++;
                 break;
             }
             else if ( tmp_secret_byte == 0x03 ){
@@ -75,6 +76,8 @@ int main ( int argc, char *argv[] ) {
 
         }
     }
+
+    string_secret[pos_secret] = '\0';
 
     printf("%s\n", string_secret);
     // ------------------------- Trimedo de cadena completa -------------------------------
