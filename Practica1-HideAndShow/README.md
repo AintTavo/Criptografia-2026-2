@@ -21,3 +21,8 @@ Pasos del programa
 5. Leer bmp y stream de lectura
 6. Durante la longitud del arreglo de bits al bmp, y escribir con una and e con cada bit del arreglo.
 7. Escribir el resto del archivo bmp
+
+## Ejecucion
+Es necesario ejecutar un server web de python en la carpeta gui para ser ejecutado
+
+python -m http.server 8000

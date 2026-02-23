@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esteganografía C + WebAssembly</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; background: #f9f9f9; }
+        .section { margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input { margin-bottom: 10px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #log { background: #333; color: #0f0; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; height: 100px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <h2>🕵️ Esteganografía C + WASM</h2>
+    <h4> Zaragoza Guerrero Gustavo | </h4>
+    
+    <div class="card">
+        <div class="section">
+            <h3>Ocultar Mensaje</h3>
+            <label>1. Imagen BMP original:</label>
+            <input type="file" id="bmpInput" accept=".bmp">
+            
+            <label>2. Archivo de texto (.txt):</label>
+            <input type="file" id="txtInput" accept=".txt">
+            
+            <button onclick="ejecutarOcultar()">Ocultar y Descargar</button>
+        </div>
+
+        <div class="section">
+            <h3>Revelar Mensaje</h3>
+            <label>Imagen con secreto (.bmp):</label>
+            <input type="file" id="bmpSecretInput" accept=".bmp">
+            <button onclick="ejecutarMostrar()">Revelar Secreto</button>
+            <p><strong>Resultado:</strong> <span id="resultadoShow">---</span></p>
+        </div>
+
+        <h4>Consola de estado:</h4>
+        <div id="log">Cargando WebAssembly...</div>
+    </div>
+
+    <script src="main.js"></script>
+
+    <script>
+        const logger = document.getElementById('log');
+        const printLog = (msg) => logger.innerHTML += `> ${msg}<br>`;
+
+        // Esperar a que el módulo de C esté listo
+        Module.onRuntimeInitialized = () => {
+            printLog("WebAssembly cargado y listo para usar.");
+        };
+
+        // --- FUNCIÓN PARA OCULTAR ---
+        async function ejecutarOcultar() {
+            const bmpFile = document.getElementById('bmpInput').files[0];
+            const txtFile = document.getElementById('txtInput').files[0];
+
+            if (!bmpFile || !txtFile) return alert("Selecciona archivos");
+
+            const bmpData = new Uint8Array(await bmpFile.arrayBuffer());
+            const txtData = new Uint8Array(await txtFile.arrayBuffer());
+
+            // Usamos nombres claros
+            Module.FS.writeFile('original.bmp', bmpData);
+            Module.FS.writeFile('mensaje.txt', txtData);
+
+            console.log("Archivos en MEMFS antes de C:", Module.FS.readdir('/'));
+
+            // Llamamos a C
+            const status = Module.ccall('hide', 'number', ['string', 'string'], ['mensaje.txt', 'original.bmp']);
+            
+            console.log("Estatus de C:", status);
+            console.log("Archivos en MEMFS después de C:", Module.FS.readdir('/'));
+
+            if (status === 0) {
+                try {
+                    // BUSCAMOS EL ARCHIVO QUE TU C DEBERÍA HABER CREADO
+                    // Según tu lógica: original.bmp -> original_secret.bmp
+                    const resultData = Module.FS.readFile('output_secret.bmp');
+                    
+                    const blob = new Blob([resultData], { type: 'image/bmp' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'output_secret.bmp';
+                    document.body.appendChild(link); // Algunos navegadores lo exigen
+                    link.click();
+                    document.body.removeChild(link);
+                    printLog("Descarga iniciada.");
+                } catch (e) {
+                    console.error("No se encontró el archivo generado:", e);
+                    printLog("Error: El archivo generado no existe en el sistema virtual.");
+                }
+            } else {
+                printLog("Error en C: Código " + status);
+            }
+        }
+        // --- FUNCIÓN PARA REVELAR ---
+        async function ejecutarMostrar() {
+            const bmpFile = document.getElementById('bmpSecretInput').files[0];
+            if (!bmpFile) return alert("Selecciona una imagen.");
+
+            const bmpData = new Uint8Array(await bmpFile.arrayBuffer());
+            Module.FS.writeFile('secret_to_read.bmp', bmpData);
+
+            // Llamar a show(path_bmp) - Recordamos que devuelve char* (string en JS)
+            const secreto = Module.ccall('show', 'string', ['string'], ['secret_to_read.bmp']);
+            
+            document.getElementById('resultadoShow').innerText = secreto;
+            printLog("Búsqueda de secreto terminada.");
+        }
+    </script>
+</body>
+</html>
