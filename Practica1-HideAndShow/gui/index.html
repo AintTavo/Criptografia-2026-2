@@ -65,6 +65,10 @@
             const bmpData = new Uint8Array(await bmpFile.arrayBuffer());
             const txtData = new Uint8Array(await txtFile.arrayBuffer());
 
+            // Derivar nombre de salida: quitar extensión, agregar 'h', volver a poner .bmp
+            const baseName = bmpFile.name.replace(/\.bmp$/i, '');
+            const outputName = baseName + '_h.bmp';
+
             // Usamos nombres claros
             Module.FS.writeFile('original.bmp', bmpData);
             Module.FS.writeFile('mensaje.txt', txtData);
@@ -87,7 +91,7 @@
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
-                    link.download = 'output_secret.bmp';
+                    link.download = outputName;
                     document.body.appendChild(link); // Algunos navegadores lo exigen
                     link.click();
                     document.body.removeChild(link);
