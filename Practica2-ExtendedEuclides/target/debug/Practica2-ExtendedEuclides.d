@@ -1,0 +1,1 @@
+C:\Users\gusta\Documents\RepoCriptografia\Criptografia-2026-2\Practica2-ExtendedEuclides\target\debug\Practica2-ExtendedEuclides.exe: C:\Users\gusta\Documents\RepoCriptografia\Criptografia-2026-2\Practica2-ExtendedEuclides\src\main.rs

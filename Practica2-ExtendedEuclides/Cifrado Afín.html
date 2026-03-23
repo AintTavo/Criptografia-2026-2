@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<!-- saved from url=(0051)file:///C:/Users/gusta/Downloads/affine_cipher.html -->
+<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cifrado Afín</title>
+<link href="./Cifrado Afín_files/css2" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f12;
+    --surface: #151820;
+    --surface2: #1c2030;
+    --border: rgba(255,255,255,0.07);
+    --border-accent: rgba(94,168,255,0.35);
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --text-dim: #9ca3af;
+    --accent: #5ea8ff;
+    --accent-soft: rgba(94,168,255,0.12);
+    --accent-teal: #2dd4a3;
+    --accent-teal-soft: rgba(45,212,163,0.10);
+    --err: #f87171;
+    --err-soft: rgba(248,113,113,0.10);
+    --ok: #4ade80;
+    --ok-soft: rgba(74,222,128,0.10);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --cols: 10;
+    --col-gap: 16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 40px 24px 60px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    gap: var(--col-gap);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .col-1 { grid-column: span 1; }
+  .col-2 { grid-column: span 2; }
+  .col-3 { grid-column: span 3; }
+  .col-4 { grid-column: span 4; }
+  .col-5 { grid-column: span 5; }
+  .col-6 { grid-column: span 6; }
+  .col-7 { grid-column: span 7; }
+  .col-8 { grid-column: span 8; }
+  .col-10 { grid-column: span 10; }
+
+  .header-row { margin-bottom: 36px; align-items: end; }
+
+  .app-title {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .app-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    margin-top: 4px;
+  }
+
+  .tag-algo {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 0.5px solid var(--border-accent);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .card-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-label::after {
+    content: '';
+    flex: 1;
+    height: 0.5px;
+    background: var(--border);
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .field-group:last-child { margin-bottom: 0; }
+
+  .field-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .field-name {
+    color: var(--accent);
+  }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  input[type="number"]:focus {
+    border-color: var(--border-accent);
+  }
+
+  .calc-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #050a14;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 13px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: opacity 0.15s, transform 0.1s;
+    margin-top: 4px;
+  }
+
+  .calc-btn:hover { opacity: 0.88; }
+  .calc-btn:active { transform: scale(0.98); }
+
+  .stat-card {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.teal { color: var(--accent-teal); }
+  .stat-value.ok { color: var(--ok); }
+  .stat-value.err { color: var(--err); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+
+  .badge-ok { background: var(--ok-soft); color: var(--ok); border: 0.5px solid rgba(74,222,128,0.25); }
+  .badge-err { background: var(--err-soft); color: var(--err); border: 0.5px solid rgba(248,113,113,0.25); }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-ok { background: var(--ok); }
+  .dot-err { background: var(--err); }
+
+  .eq-section { margin-bottom: 20px; }
+  .eq-section:last-child { margin-bottom: 0; }
+
+  .eq-type {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .eq-box {
+    background: var(--surface2);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.8;
+  }
+
+  .eq-box.teal-accent { border-left-color: var(--accent-teal); }
+
+  .v { color: var(--accent); font-weight: 500; }
+  .vt { color: var(--accent-teal); font-weight: 500; }
+
+  .divider {
+    height: 0.5px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  .verify-row {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .verify-ok { color: var(--ok); }
+  .verify-eq { color: var(--text-dim); }
+
+  .placeholder {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 32px 0;
+    border: 0.5px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  .col-ruler {
+    grid-column: span 10;
+    display: flex;
+    gap: var(--col-gap);
+    margin-bottom: 2px;
+  }
+
+  .col-tick {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0,1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .step-item {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .step-n { color: var(--text-muted); margin-bottom: 3px; }
+  .step-v { color: var(--text); font-size: 13px; font-weight: 500; }
+  .step-v.accent { color: var(--accent); }
+  .step-v.teal { color: var(--accent-teal); }
+
+  @media (max-width: 900px) {
+    :root { --cols: 6; }
+    .col-4 { grid-column: span 6; }
+    .col-6 { grid-column: span 6; }
+    .col-3 { grid-column: span 3; }
+  }
+
+  @media (max-width: 600px) {
+    :root { --cols: 4; }
+    .col-1, .col-2, .col-3, .col-4, .col-5, .col-6, .col-7, .col-8, .col-10 { grid-column: span 4; }
+  }
+</style>
+<style type="text/css" id="operaUserStyle"></style></head>
+<body>
+
+<div class="grid header-row">
+  <div class="col-7">
+    <div class="app-title">Cifrado Afín</div>
+    <div class="app-subtitle">C = α·p + β mod n &nbsp;&nbsp;/&nbsp;&nbsp; p = α⁻¹·(C − β) mod n</div>
+  </div>
+  <div class="col-3" style="display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;">
+    <span class="tag-algo">Euclides extendido</span>
+    <span class="tag-algo">Bézout</span>
+  </div>
+</div>
+
+<div class="grid" style="margin-bottom:20px;">
+  <div class="col-1 col-tick"></div><div class="col-1 col-tick"></div><div class="col-1 col-tick"></div>
+  <div class="col-1 col-tick"></div><div class="col-1 col-tick"></div><div class="col-1 col-tick"></div>
+  <div class="col-1 col-tick"></div><div class="col-1 col-tick"></div><div class="col-1 col-tick"></div>
+  <div class="col-1 col-tick"></div>
+</div>
+
+<div class="grid" style="align-items:start;">
+
+  <div class="col-4">
+    <div class="card">
+      <div class="card-label">Parámetros</div>
+
+      <div class="field-group">
+        <div class="field-label"><span class="field-name">n</span> — tamaño del alfabeto</div>
+        <input type="number" id="n" value="239" min="2" oninput="calcular()">
+      </div>
+
+      <div class="field-group">
+        <div class="field-label"><span class="field-name">α</span> — clave multiplicativa</div>
+        <input type="number" id="alpha" value="97" min="1" oninput="calcular()">
+      </div>
+
+      <div class="field-group">
+        <div class="field-label"><span class="field-name">β</span> — desplazamiento</div>
+        <input type="number" id="beta" value="240" min="0" oninput="calcular()">
+      </div>
+
+      <button class="calc-btn" onclick="calcular()">Calcular</button>
+    </div>
+
+    <div class="grid" style="margin-top:12px;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+      <div class="stat-card">
+        <div class="stat-label">mcd(n, α)</div>
+        <div class="stat-value accent" id="stat-mcd">1</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Coprimo</div>
+        <div class="stat-value ok" id="stat-coprime">Sí</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">α⁻¹ mod n</div>
+        <div class="stat-value teal" id="stat-inv">85</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">β mod n</div>
+        <div class="stat-value" id="stat-betamod">1</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6">
+    <div class="card" id="result-card">
+      <div class="card-label">Ecuaciones</div>
+      <div id="output"><div class="badge badge-ok"><div class="dot dot-ok"></div>Coprimo — cifrado invertible</div>
+        <div class="eq-section">
+          <div class="eq-type">Cifrado (EK)</div>
+          <div class="eq-box">C = <span class="v">3</span> · p + <span class="v">1</span> mod <span class="v">127</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="eq-section">
+          <div class="eq-type">Descifrado (DK) — forma 1</div>
+          <div class="eq-box teal-accent">p = <span class="vt">85</span> · [ C + <span class="vt">126</span> ] mod <span class="vt">127</span></div>
+        </div>
+        <div class="eq-section" style="margin-top:10px;">
+          <div class="eq-type">Descifrado (DK) — forma expandida</div>
+          <div class="eq-box teal-accent">
+            p = <span class="vt">85</span> · C + (<span class="vt">85</span> × <span class="vt">126</span>) mod <span class="vt">127</span><br>
+            <span style="color:var(--text-muted);font-size:13px;">= <span class="vt">85</span> · C + <span class="vt">42</span> mod <span class="vt">127</span></span>
+          </div>
+        </div><div class="verify-row" style="margin-top:14px;">
+      <span class="verify-eq">verificación: α · α⁻¹ mod n</span>
+      <span class="verify-ok">3 × 85 mod 127 = 1</span>
+    </div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="card-label">Pasos del algoritmo extendido</div>
+      <div id="steps-output"><div class="steps-grid"><div class="step-item">
+        <div class="step-n">iter 1</div>
+        <div class="step-v">127 = 3·42 + 1</div>
+      </div><div class="step-item">
+        <div class="step-n">iter 2</div>
+        <div class="step-v">3 = 1·3 + 0</div>
+      </div></div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function euclid(a, b) {
+    if (b === 0) return a;
+    return euclid(b, a % b);
+  }
+
+  function xgcdRec(a, b) {
+    if (b === 0) return [a, 1, 0];
+    const [d, x1, y1] = xgcdRec(b, a % b);
+    const q = Math.floor(a / b);
+    return [d, y1, x1 - y1 * q];
+  }
+
+  function modPos(x, n) { return ((x % n) + n) % n; }
+
+  function getInverse(n, alpha) {
+    const a = Math.max(n, alpha);
+    const b = Math.min(n, alpha);
+    const [d, x, y] = xgcdRec(a, b);
+    let out = (a === alpha) ? x : y;
+    return modPos(out, n);
+  }
+
+  function getSteps(a, b) {
+    const steps = [];
+    let [ra, rb] = [a, b];
+    while (rb !== 0) {
+      const q = Math.floor(ra / rb);
+      const r = ra % rb;
+      steps.push({ a: ra, b: rb, q, r });
+      [ra, rb] = [rb, r];
+    }
+    return steps;
+  }
+
+  function v(x) { return `<span class="v">${x}</span>`; }
+  function vt(x) { return `<span class="vt">${x}</span>`; }
+
+  function calcular() {
+    const n = parseInt(document.getElementById('n').value);
+    const alpha = parseInt(document.getElementById('alpha').value);
+    const beta = parseInt(document.getElementById('beta').value);
+    const out = document.getElementById('output');
+    const stepsOut = document.getElementById('steps-output');
+
+    if (isNaN(n) || isNaN(alpha) || isNaN(beta) || n < 2 || alpha < 1 || beta < 0) {
+      document.getElementById('stat-mcd').textContent = '—';
+      document.getElementById('stat-coprime').textContent = '—';
+      document.getElementById('stat-inv').textContent = '—';
+      document.getElementById('stat-betamod').textContent = '—';
+      out.innerHTML = '<div class="placeholder">Valores inválidos</div>';
+      stepsOut.innerHTML = '<div class="placeholder">—</div>';
+      return;
+    }
+
+    const mcd = euclid(Math.max(n, alpha), Math.min(n, alpha));
+    const esCoprime = mcd === 1;
+
+    document.getElementById('stat-mcd').textContent = mcd;
+
+    const mcdEl = document.getElementById('stat-coprime');
+    if (esCoprime) {
+      mcdEl.textContent = 'Sí'; mcdEl.className = 'stat-value ok';
+    } else {
+      mcdEl.textContent = 'No'; mcdEl.className = 'stat-value err';
+    }
+
+    if (!esCoprime) {
+      document.getElementById('stat-inv').textContent = '∄';
+      document.getElementById('stat-betamod').textContent = beta % n;
+      out.innerHTML = `
+        <div class="badge badge-err"><div class="dot dot-err"></div>No coprimo — cifrado no invertible</div>
+        <div class="eq-box" style="border-left-color:var(--err);font-size:13px;color:var(--text-muted);">
+          mcd(${n}, ${alpha}) = ${mcd} ≠ 1<br>
+          α y n deben ser coprimos para garantizar la biyectividad del cifrado.
+        </div>`;
+      stepsOut.innerHTML = '<div class="placeholder">Sin inverso — α no es invertible mod n</div>';
+      return;
+    }
+
+    const negAlpha = getInverse(n, alpha);
+    const betaMod = beta % n;
+    const negBeta = betaMod === 0 ? 0 : n - betaMod;
+    const dk_const = modPos(negAlpha * negBeta, n);
+
+    document.getElementById('stat-inv').textContent = negAlpha;
+    document.getElementById('stat-betamod').textContent = betaMod;
+
+    let html = `<div class="badge badge-ok"><div class="dot dot-ok"></div>Coprimo — cifrado invertible</div>`;
+
+    if (betaMod !== 0) {
+      html += `
+        <div class="eq-section">
+          <div class="eq-type">Cifrado (EK)</div>
+          <div class="eq-box">C = ${v(alpha)} · p + ${v(betaMod)} mod ${v(n)}</div>
+        </div>
+        <div class="divider"></div>
+        <div class="eq-section">
+          <div class="eq-type">Descifrado (DK) — forma 1</div>
+          <div class="eq-box teal-accent">p = ${vt(negAlpha)} · [ C + ${vt(negBeta)} ] mod ${vt(n)}</div>
+        </div>
+        <div class="eq-section" style="margin-top:10px;">
+          <div class="eq-type">Descifrado (DK) — forma expandida</div>
+          <div class="eq-box teal-accent">
+            p = ${vt(negAlpha)} · C + (${vt(negAlpha)} × ${vt(negBeta)}) mod ${vt(n)}<br>
+            <span style="color:var(--text-muted);font-size:13px;">= ${vt(negAlpha)} · C + ${vt(dk_const)} mod ${vt(n)}</span>
+          </div>
+        </div>`;
+    } else {
+      html += `
+        <div class="eq-section">
+          <div class="eq-type">Cifrado (EK)</div>
+          <div class="eq-box">C = ${v(alpha)} · p mod ${v(n)}</div>
+        </div>
+        <div class="divider"></div>
+        <div class="eq-section">
+          <div class="eq-type">Descifrado (DK)</div>
+          <div class="eq-box teal-accent">p = ${vt(negAlpha)} · C mod ${vt(n)}</div>
+        </div>`;
+    }
+
+    html += `<div class="verify-row" style="margin-top:14px;">
+      <span class="verify-eq">verificación: α · α⁻¹ mod n</span>
+      <span class="verify-ok">${alpha} × ${negAlpha} mod ${n} = ${(alpha * negAlpha) % n}</span>
+    </div>`;
+
+    out.innerHTML = html;
+
+    const steps = getSteps(Math.max(n, alpha), Math.min(n, alpha));
+    if (steps.length === 0) {
+      stepsOut.innerHTML = '<div class="placeholder">Sin pasos (b = 0)</div>';
+      return;
+    }
+
+    const maxShow = 5;
+    const shown = steps.slice(0, maxShow);
+    let sh = `<div class="steps-grid">`;
+    shown.forEach((s, i) => {
+      sh += `<div class="step-item">
+        <div class="step-n">iter ${i + 1}</div>
+        <div class="step-v">${s.a} = ${s.b}·${s.q} + ${s.r}</div>
+      </div>`;
+    });
+    if (steps.length > maxShow) {
+      sh += `<div class="step-item" style="display:flex;align-items:center;justify-content:center;">
+        <div class="step-v accent">+${steps.length - maxShow} más</div>
+      </div>`;
+    }
+    sh += `</div>`;
+
+    stepsOut.innerHTML = sh;
+  }
+
+  calcular();
+</script>
+
+
+</body></html>
