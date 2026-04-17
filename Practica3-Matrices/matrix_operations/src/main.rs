@@ -6,9 +6,10 @@ use colored::Colorize;
 
 fn main() {
     let matrix_0 = [5 , 17, 20, 9, 23, 3, 2, 11, 13];
-    print_matrix(&matrix_0);
+    print_matrix(&matrix_adj(&matrix_0));
     let determinant = matrix_determinant(&matrix_0);
     println!("{} {}","Determinante 1:".blue(), determinant);
+
 
     println!();
     let matrix_1 = [0, 1, 2, 3];
@@ -85,6 +86,11 @@ fn matrix_determinant( matrix : &[i32] ) -> i32 {
 }
 
 
+fn matrix_adj( matrix : &[i32] ) -> Vec<i32> {
+    let mut tmp_matrix : Vec<i32> = matrix.to_vec();
+    tmp_matrix.reverse();
+    return tmp_matrix;
+}
 
 
 /*
