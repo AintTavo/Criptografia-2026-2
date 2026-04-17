@@ -1,7 +1,7 @@
 fn main() {
-    let n_length = 239;
-    let alpha = 97;
-    let beta = 240;
+    let n_length = 30;
+    let alpha = 5;
+    let beta = 61;
     if euclid_valid(n_length, alpha) {
         println!("Es numero coprimo");
         
