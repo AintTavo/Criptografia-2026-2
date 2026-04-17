@@ -6,14 +6,20 @@ use colored::Colorize;
 
 fn main() {
     let matrix_0 = [5 , 17, 20, 9, 23, 3, 2, 11, 13];
-    print_matrix(&matrix_adj(&matrix_0));
+    println!("{}", "Matriz original 0 :".blue());
+    print_matrix(&matrix_0);
+    println!("{}", "Matriz 0  transpuesta:".blue());
+    print_matrix(&matrix_transposed(&matrix_0));
     let determinant = matrix_determinant(&matrix_0);
     println!("{} {}","Determinante 1:".blue(), determinant);
 
 
     println!();
     let matrix_1 = [0, 1, 2, 3];
+    println!("{}", "Matriz original 1 :".blue());
     print_matrix(&matrix_1);
+    println!("{}", "Matriz 1 transpuesta:".blue());
+    print_matrix(&matrix_transposed(&matrix_1));
     let determinant = matrix_determinant(&matrix_1);
     println!("{} {}", "Determinante 2:".blue(), determinant);
 
@@ -86,9 +92,24 @@ fn matrix_determinant( matrix : &[i32] ) -> i32 {
 }
 
 
-fn matrix_adj( matrix : &[i32] ) -> Vec<i32> {
-    let mut tmp_matrix : Vec<i32> = matrix.to_vec();
-    tmp_matrix.reverse();
+
+fn matrix_transposed( matrix : &[i32] ) -> Vec<i32> {
+    let mut tmp_matrix : Vec<i32> = Vec::new();
+    let size = matrix.len();
+    if !matrix_validation(size) { 
+        tmp_matrix.push(-1);
+        return tmp_matrix;
+    }
+    let size = (size as f64).sqrt() as i32;
+    let size = size as u32;
+    let _size = size as i32;
+    for i in 0.._size {
+        for j in 0.._size {
+            tmp_matrix.push(find_in_matrix( matrix, size, j, i));
+        }
+    }
+    
+    
     return tmp_matrix;
 }
 
@@ -129,4 +150,28 @@ fn print_matrix(matrix: &[i32]) {
         }
         println!("{}","|".yellow().bold());
     }
+}
+
+fn matrix_validation(size : usize) -> bool {
+    let size = size as f64;
+    let size = size.sqrt();
+
+    // corrección de errores :
+    // En caso de que su raiz cuadrada tenga decimales (no es un numero cuadrado) regresa un error
+    if size != size.trunc() {
+        println!("{} {}","Error:".red().bold(), "This function only accept square matrices".red());
+        return false;
+    }
+
+    // cambia el float
+    let size = size as u32;
+
+    // Corrección de errores : 
+    // si esta es de mayor tamaño a 3 la función termina
+    if size > 3 {
+        println!("{} {}","Error:".red().bold(), "The function only acceps square matrices of 1 to 2".red());
+        return false;
+    }
+
+    return true;
 }
