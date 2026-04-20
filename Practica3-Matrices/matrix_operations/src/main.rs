@@ -1,8 +1,8 @@
 use colored::Colorize;
 
-/*
+/*  --------------------------------------------------------------------------------
     Test Area : Funcion Main
-*/
+*/  --------------------------------------------------------------------------------
 
 fn main() {
     let matrix_0 = [5 , 17, 20, 9, 23, 3, 2, 11, 13];
@@ -12,8 +12,13 @@ fn main() {
     print_matrix(&matrix_transposed(&matrix_0));
     let determinant = matrix_determinant(&matrix_0);
     println!("{} {}","Determinante 1:".blue(), determinant);
+    println!("{}", "Matriz 0  cofactor 0,0:".blue());
+    print_matrix(&matrix_cofactor(&matrix_0, 0,0));
+    println!("{} {}","Determinante 1:".blue(), matrix_determinant(&matrix_cofactor(&matrix_0, 0,0)));
+    print_matrix_f(&matrix_inverse(&matrix_0));
+    
 
-
+    /*
     println!();
     let matrix_1 = [0, 1, 2, 3];
     println!("{}", "Matriz original 1 :".blue());
@@ -33,17 +38,28 @@ fn main() {
     print_matrix(&matrix_multiplication_escalar(&matrix_2,5));
     println!("{}", "Matriz 2 * 5 mod 20 :".blue());
     print_matrix(&matrix_module(&matrix_multiplication_escalar(&matrix_2, 5), 20));
-
+    */
 }
 
-/*
-    Main code : Funciones principales
-*/
+/*  --------------------------------------------------------------------------------
+    Main code : Algebra lineal pura
+*/  --------------------------------------------------------------------------------
 
 // -> Función para calcular la matriz inversa
-fn matrix_inverse( matrix : &[i32] ) {
-
+fn matrix_inverse ( matrix : &[i32] ) -> Vec<f64> {
+    let _tmp_determinant = matrix_determinant(&matrix);
+    if _tmp_determinant == 0 {
+        error("The inverse matrix does not exist. The determinant is equal to 0.");
+        let result : Vec<f64> = Vec::new();
+        return result;
+    }
+    let _tmp_matrix : Vec<i32> = Vec::from(matrix_adjugate(&matrix));
+    let _tmp_determinant : f64 = 1.0 / (matrix_determinant(&matrix)) as f64;
+    let result : Vec<f64> = Vec::from(matrix_multiplication_escalar_f(&_tmp_matrix, _tmp_determinant));
+    return result;
 }
+
+
 
 
 // -> Funcion para determinar la determinante de una matriz, solo si esta es 3x3 o 2x2
@@ -66,6 +82,10 @@ fn matrix_determinant( matrix : &[i32] ) -> i32 {
     if size > 3 {
         error("The function only acceps square matrices of 1 to 2");
         return -1;
+    }
+
+    if size == 1 {
+        return matrix[0];
     }
 
     // Determinante si esta es una matriz 2x2
@@ -137,7 +157,47 @@ fn matrix_adjugate(matrix : &[i32] ) -> Vec<i32> {
         tmp_matrix.push(-1);
         return tmp_matrix;
     }
+    let size = (size as f64).sqrt() as i32;
+
     debug("2x2", "llegada a matriz 2 x 2");
+
+    let base : i32 = -1;
+    for i in 0..size {
+        for j in 0..size {
+            let _tmp_cofactor = matrix_cofactor(matrix,i,j);
+            let _tmp_determinant = matrix_determinant(&_tmp_cofactor);
+            let _result = base.pow(((i + 1) + (j + 1)) as u32) * _tmp_determinant;
+            tmp_matrix.push(_result);
+        }
+    }
+    return tmp_matrix;
+}
+
+fn matrix_cofactor(matrix : &[i32], i_coef : i32, j_coef : i32) -> Vec<i32> {
+    let mut tmp_matrix : Vec<i32> = Vec::new();
+    let size = matrix.len();
+    if !matrix_validation(size) { 
+        error("The size of the matrix is not the size of a square matrix");
+        tmp_matrix.push(-1);
+        return tmp_matrix;
+    }
+    let size = (size as f64).sqrt() as i32;
+
+    if (i_coef >= size) || (j_coef >= size) {
+        error("The index of cofactor is out of reach.");
+    }
+
+    let _size = size as u32;
+
+    for i in 0..size {
+        for j in 0..size {
+            if i == i_coef {continue};
+            if j == j_coef {continue};
+            let _new_coef = find_in_matrix(&matrix, _size, j, i);
+            tmp_matrix.push(_new_coef);
+        }
+    }
+
     return tmp_matrix;
 }
 
@@ -182,6 +242,20 @@ fn matrix_multiplication_escalar( matrix : &[i32] , escalar : i32 ) -> Vec<i32> 
     return tmp_matrix;
 }
 
+fn matrix_multiplication_escalar_f( matrix : &[i32] , escalar : f64 ) -> Vec<f64> {
+    let mut tmp_matrix : Vec<f64> = Vec::new();
+
+    let _size = matrix.len();
+    for i in 0.._size {
+        tmp_matrix.push( (matrix[i] as f64) * escalar );
+    }
+    return tmp_matrix;
+}
+
+/*  --------------------------------------------------------------------------------
+    Main Code : Algebra modular
+*/  --------------------------------------------------------------------------------
+
 // -> Funcion para sacar el modulo de una matriz con un modulo m
 fn matrix_module( matrix : &[i32] , m : u32 ) -> Vec<i32> {
     let mut tmp_matrix : Vec<i32> = Vec::new();
@@ -195,13 +269,89 @@ fn matrix_module( matrix : &[i32] , m : u32 ) -> Vec<i32> {
     return tmp_matrix;
 }
 
+fn euclid( a : i32, b: i32 ) -> i32 {
+    if b == 0 {
+        return a;
+    }
+    else {
+        return euclid(b, a%b);
+    }
+}
 
-/*
+fn euclid_valid( n_length : i32 , alpha : i32 ) -> bool {
+    let a = if n_length > alpha { n_length } else { alpha };
+    let b = if n_length > alpha { alpha } else { n_length };
+
+    let mcd : i32 = euclid(a, b);
+    if mcd == 1 {
+        return true;
+    }
+    return false;
+}
+
+fn euclid_extended( n_length : i32, alpha : i32 ) -> i32 {
+    let a = if n_length > alpha { n_length } else { alpha };
+    let b = if n_length > alpha { alpha } else { n_length };
+
+    let (d, x, y) = xgcd_rec(a, b);
+
+    let out : i32;
+    if ((x*alpha) + (y*n_length)) == d {
+        out = x;
+    }
+    else {
+        out = y;
+    }
+
+    if out > 0 {
+        return out;
+    }
+    else {
+        return out%n_length;
+    }
+}
+
+fn xgcd_rec( a : i32 , b : i32 ) -> ( i32, i32, i32 ) {
+    if b == 0 {
+        return ( a, 1, 0 );
+    }
+    else {
+        let (d, x1, y1) = xgcd_rec(b, a%b);
+
+        let q = a / b;
+
+        let x = y1;
+        let y = x1 - y1 * q;
+
+        assert!( a*x + b*y == d, "La ecuación de Bezout no se cumple");
+        return (d, x, y);
+    }
+}
+
+
+fn matrix_inverse_module(matrix : &[i32] , m : i32) -> Vec<i32> {
+    let _tmp_determinant = matrix_determinant(&matrix);
+    if _tmp_determinant == 0 {
+        error("The inverse matrix does not exist. The determinant is equal to 0.");
+        let result : Vec<f64> = Vec::new();
+        return result;
+    }
+
+    
+}
+
+/*  --------------------------------------------------------------------------------
     Tool functions : Funciones que sirven principalmente como herramientas para el resto del desarrollo.
-*/
+*/  --------------------------------------------------------------------------------
 
 // -> Función para devolver un valor a partir de solo sus cordenadas, ademas si las cordenadas se pasan o son negativas se les aplica un modulo
 fn find_in_matrix( matrix: &[i32] , size : u32 , row : i32 , column : i32 ) -> i32 {
+    let tmp_row : u32 = module(row, size as u32);
+    let tmp_col : u32 = module(column, size as u32);
+    return matrix[((size * tmp_row) + tmp_col) as usize];
+} 
+
+fn find_in_matrix_f( matrix: &[f64] , size : u32 , row : i32 , column : i32 ) -> f64 {
     let tmp_row : u32 = module(row, size as u32);
     let tmp_col : u32 = module(column, size as u32);
     return matrix[((size * tmp_row) + tmp_col) as usize];
@@ -229,6 +379,26 @@ fn print_matrix(matrix: &[i32]) {
         print!("{}","|".yellow().bold());
         for j in 0..size {
             print!("\t{}\t", find_in_matrix(matrix, size as u32, i, j));
+        }
+        println!("{}","|".yellow().bold());
+    }
+}
+
+fn print_matrix_f(matrix: &[f64]) {
+    let size = matrix.len() as f64;
+    let size = size.sqrt();
+
+    if size != size.trunc() {
+        println!("{} {}","Error:".red().bold(), "This function only accept square matrices".red());
+        return;
+    }
+    
+    let size = size as i32;
+
+    for i in 0..size {
+        print!("{}","|".yellow().bold());
+        for j in 0..size {
+            print!("\t{:.4}\t", find_in_matrix_f(matrix, size as u32, i, j));
         }
         println!("{}","|".yellow().bold());
     }
