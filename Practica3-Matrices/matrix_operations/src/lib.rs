@@ -26,7 +26,6 @@ pub fn matrix_inverse ( matrix : &[i32] ) -> Vec<f64> {
 
 
 
-
 // -> Funcion para determinar la determinante de una matriz, solo si esta es 3x3 o 2x2
 #[wasm_bindgen]
 pub fn matrix_determinant( matrix : &[i32] ) -> i32 {
@@ -63,9 +62,7 @@ pub fn matrix_determinant( matrix : &[i32] ) -> i32 {
         return (a * d) - (b * c);
     }
 
-
     // Determinante si esta es una matriz 3x3
-
     let _size = size as i32;
     let mut determinant : i32 = 0;  // inicializa el valor del determinante
     let mut tmp_det : i32;          // Guarda el valor de la multipliocación en cada diagonal
@@ -291,6 +288,17 @@ pub fn matrix_inverse_module(matrix : &[i32] , m : u32) -> Vec<i32> {
     _tmp_determinant = euclid_extended(m as i32, _tmp_determinant);
     result = matrix_adjugate(&matrix);
     result = matrix_multiplication_escalar_module(&result, _tmp_determinant, m);
+
+    let _tmp_result : Vec<i32> = Vec::from(matrix);
+    let _tmp_result = matrix_multiplication_matrix_module(&result, &_tmp_result, m);
+    let identity : Vec<i32> = Vec::from([1,0,0,0,1,0,0,0,1]);
+
+    if _tmp_result != identity {
+        error("The calculated inverse is not correct. Please check the calculations.");
+        result.clear();
+        return result;
+    }
+    
     return result;
 }
 

@@ -19,9 +19,12 @@ fn main() {
     print_matrix(&matrix_cofactor(&matrix_0, 0,0));
     println!("{} {}","Determinante 1:".blue(), matrix_determinant(&matrix_cofactor(&matrix_0, 0,0)));
     print_matrix(&matrix_inverse_module(&matrix_0, 27));
+    /*
     print_matrix_f(&matrix_inverse(&matrix_0));
     matrix_addition_module(&matrix_0,&matrix_0,5);
     print_matrix(&matrix_multiplication_matrix_module(&matrix_0, &matrix_inverse_module(&matrix_0, 27), 27));
+     */
+    
     /*
     println!();
     let matrix_1 = [0, 1, 2, 3];
@@ -55,15 +58,25 @@ fn main() {
 // -> Función para calcular la matriz inversa
 #[wasm_bindgen]
 pub fn matrix_inverse ( matrix : &[i32] ) -> Vec<f64> {
+    // Calcula la determinante de la matriz 
     let _tmp_determinant = matrix_determinant(&matrix);
+
+    // Se valida principalmente que la determinante no sea 0, porque sino la inversa seria inexistente
     if _tmp_determinant == 0 {
         error("The inverse matrix does not exist. The determinant is equal to 0.");
         let result : Vec<f64> = Vec::new();
         return result;
     }
+
+    // Se calcula la matriz adjunta
     let _tmp_matrix : Vec<i32> = Vec::from(matrix_adjugate(&matrix));
+
+    // Se obtiene el factor determinante inverso multiplicativo
     let _tmp_determinant : f64 = 1.0 / (matrix_determinant(&matrix)) as f64;
+
+    // Se multiplica la matriz adjunta y el factor inverso multiplicativo
     let result : Vec<f64> = Vec::from(matrix_multiplication_escalar_f(&_tmp_matrix, _tmp_determinant));
+
     return result;
 }
 
@@ -108,7 +121,6 @@ pub fn matrix_determinant( matrix : &[i32] ) -> i32 {
 
 
     // Determinante si esta es una matriz 3x3
-
     let _size = size as i32;
     let mut determinant : i32 = 0;  // inicializa el valor del determinante
     let mut tmp_det : i32;          // Guarda el valor de la multipliocación en cada diagonal
@@ -171,8 +183,6 @@ pub fn matrix_adjugate(matrix : &[i32] ) -> Vec<i32> {
         return tmp_matrix;
     }
     let size = (size as f64).sqrt() as i32;
-
-    debug("2x2", "llegada a matriz 2 x 2");
 
     let base : i32 = -1;
     for i in 0..size {
@@ -322,6 +332,7 @@ pub fn matrix_module( matrix : &[i32] , m : u32 ) -> Vec<i32> {
     return tmp_matrix;
 }
 
+// -> Funcion para calcula la matriz inversa en algebra lineal modular
 #[wasm_bindgen]
 pub fn matrix_inverse_module(matrix : &[i32] , m : u32) -> Vec<i32> {
     let mut _tmp_determinant = matrix_determinant(&matrix);
@@ -334,9 +345,23 @@ pub fn matrix_inverse_module(matrix : &[i32] , m : u32) -> Vec<i32> {
     _tmp_determinant = euclid_extended(m as i32, _tmp_determinant);
     result = matrix_adjugate(&matrix);
     result = matrix_multiplication_escalar_module(&result, _tmp_determinant, m);
+
+    let _tmp_result : Vec<i32> = Vec::from(matrix);
+    let _tmp_result = matrix_multiplication_matrix_module(&result, &_tmp_result, m);
+    let identity : Vec<i32> = Vec::from([1,0,0,0,1,0,0,0,1]);
+
+    if _tmp_result != identity {
+        error("The calculated inverse is not correct. Please check the calculations.");
+        result.clear();
+        return result;
+    }
+    
     return result;
 }
 
+
+
+// -> Funcion para sumar dos matrices y despues sacar el modulo de la matriz resultante
 #[wasm_bindgen]
 pub fn matrix_addition_module( matrix_a : &[i32] , matrix_b : &[i32] , m : u32 ) -> Vec<i32> {
     let tmp_matrix = matrix_addition(&matrix_a, &matrix_b);
@@ -351,6 +376,7 @@ pub fn matrix_multiplication_matrix_module( matrix_a : &[i32], matrix_b : &[i32]
     return tmp_matrix;
 }
 
+
 #[wasm_bindgen]
 pub fn matrix_multiplication_escalar_module( matrix : &[i32] , escalar : i32 , m : u32 ) -> Vec<i32> {
     let tmp_matrix = matrix_multiplication_escalar(&matrix, escalar);
@@ -358,6 +384,8 @@ pub fn matrix_multiplication_escalar_module( matrix : &[i32] , escalar : i32 , m
     return tmp_matrix;
 }
 
+
+// -> Funcion de euclides extendido para encontrar el inverso multiplicativo de un numero alpha con respecto a un modulo n_length
 fn euclid_extended( n_length : i32, alpha : i32 ) -> i32 {
     let a = if n_length > alpha { n_length } else { alpha };
     let b = if n_length > alpha { alpha } else { n_length };
@@ -380,6 +408,9 @@ fn euclid_extended( n_length : i32, alpha : i32 ) -> i32 {
     }
 }
 
+
+
+// -> Funcion para calcular el algoritmo de euclides extendido
 fn xgcd_rec( a : i32 , b : i32 ) -> ( i32, i32, i32 ) {
     if b == 0 {
         return ( a, 1, 0 );
