@@ -1,49 +1,6 @@
 use colored::Colorize;
 use wasm_bindgen::prelude::*;
 
-/*  
-    --------------------------------------------------------------------------------
-    Test Area : Funcion Main
-    --------------------------------------------------------------------------------
-*/  
-
-fn main() {
-    let matrix_0 = [5 , 17, 20, 9, 23, 3, 2, 11, 13];
-    println!("{}", "Matriz original 0 :".blue());
-    print_matrix(&matrix_0);
-    println!("{}", "Matriz 0  transpuesta:".blue());
-    print_matrix(&matrix_transposed(&matrix_0));
-    let determinant = matrix_determinant(&matrix_0);
-    println!("{} {}","Determinante 1:".blue(), determinant);
-    println!("{}", "Matriz 0  cofactor 0,0:".blue());
-    print_matrix(&matrix_cofactor(&matrix_0, 0,0));
-    println!("{} {}","Determinante 1:".blue(), matrix_determinant(&matrix_cofactor(&matrix_0, 0,0)));
-    print_matrix(&matrix_inverse_module(&matrix_0, 27));
-    print_matrix_f(&matrix_inverse(&matrix_0));
-    matrix_addition_module(&matrix_0,&matrix_0,5);
-    print_matrix(&matrix_multiplication_matrix_module(&matrix_0, &matrix_inverse_module(&matrix_0, 27), 27));
-    /*
-    println!();
-    let matrix_1 = [0, 1, 2, 3];
-    println!("{}", "Matriz original 1 :".blue());
-    print_matrix(&matrix_1);
-    println!("{}", "Matriz 1 transpuesta:".blue());
-    print_matrix(&matrix_transposed(&matrix_1));
-    let determinant = matrix_determinant(&matrix_1);
-    println!("{} {}", "Determinante 2:".blue(), determinant);
-
-    println!();
-    let matrix_2 = [1 , 2, 3, 4, 5, 6, 7, 8, 9];
-    println!("{}", "Matriz original 2 :".blue());
-    print_matrix(&matrix_2);
-    println!("{}", "Matriz 2 + Matriz 1 :".blue());
-    print_matrix(&matrix_addition(&matrix_2,&matrix_0));
-    println!("{}", "Matriz 2 * 5 :".blue());
-    print_matrix(&matrix_multiplication_escalar(&matrix_2,5));
-    println!("{}", "Matriz 2 * 5 mod 20 :".blue());
-    print_matrix(&matrix_module(&matrix_multiplication_escalar(&matrix_2, 5), 20));
-    */
-}
 
 /*  
     --------------------------------------------------------------------------------
@@ -411,11 +368,6 @@ fn find_in_matrix( matrix: &[i32] , size : u32 , row : i32 , column : i32 ) -> i
     return matrix[((size * tmp_row) + tmp_col) as usize];
 } 
 
-fn find_in_matrix_f( matrix: &[f64] , size : u32 , row : i32 , column : i32 ) -> f64 {
-    let tmp_row : u32 = module(row, size as u32);
-    let tmp_col : u32 = module(column, size as u32);
-    return matrix[((size * tmp_row) + tmp_col) as usize];
-} 
 
 // -> Función para que el modulo siempre salga positivo, esta es necesaria porque rust no devuelve el modulo siempre positivo.
 fn module( a : i32, n : u32) -> u32 {
@@ -423,46 +375,6 @@ fn module( a : i32, n : u32) -> u32 {
     return (((a % _n) + _n) % _n ) as u32;
 }
 
-// -> Función para imprimir en terminal las matrices para que sean mas faciles de visualizar.
-fn print_matrix(matrix: &[i32]) {
-    let size = matrix.len() as f64;
-    let size = size.sqrt();
-
-    if size != size.trunc() {
-        println!("{} {}","Error:".red().bold(), "This function only accept square matrices".red());
-        return;
-    }
-    
-    let size = size as i32;
-
-    for i in 0..size {
-        print!("{}","|".yellow().bold());
-        for j in 0..size {
-            print!("\t{}\t", find_in_matrix(matrix, size as u32, i, j));
-        }
-        println!("{}","|".yellow().bold());
-    }
-}
-
-fn print_matrix_f(matrix: &[f64]) {
-    let size = matrix.len() as f64;
-    let size = size.sqrt();
-
-    if size != size.trunc() {
-        println!("{} {}","Error:".red().bold(), "This function only accept square matrices".red());
-        return;
-    }
-    
-    let size = size as i32;
-
-    for i in 0..size {
-        print!("{}","|".yellow().bold());
-        for j in 0..size {
-            print!("\t{:.4}\t", find_in_matrix_f(matrix, size as u32, i, j));
-        }
-        println!("{}","|".yellow().bold());
-    }
-}
 
 // -> Función para verificar el tamaño de una matriz, que sea 3x3 o 2x2
 fn matrix_validation(size : usize) -> bool {

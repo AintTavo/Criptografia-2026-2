@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MatrixLab</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08080a;--s1:#0f0f13;--s2:#161619;--s3:#1e1e24;
+  --b0:rgba(255,255,255,0.05);--b1:rgba(255,255,255,0.10);--b2:rgba(255,255,255,0.18);
+  --acc:#c8f562;--acc2:#a8d040;--acc-d:rgba(200,245,98,0.08);--acc-d2:rgba(200,245,98,0.14);
+  --txt:#eeeef0;--txt2:#888890;--txt3:#444450;
+  --err:#ff6b6b;--err-d:rgba(255,107,107,0.10);
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* NAV */
+header{display:flex;align-items:center;border-bottom:1px solid var(--b0);background:var(--s1);height:46px;flex-shrink:0}
+.logo{padding:0 18px;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--acc);letter-spacing:3px;text-transform:uppercase;border-right:1px solid var(--b0);height:100%;display:flex;align-items:center;flex-shrink:0}
+.mode-tabs{display:flex;height:100%}
+.mode-tab{padding:0 20px;font-family:var(--mono);font-size:10px;color:var(--txt2);cursor:pointer;border:none;background:transparent;border-right:1px solid var(--b0);height:100%;letter-spacing:0.8px;transition:all 0.13s;text-transform:uppercase;position:relative}
+.mode-tab:hover{color:var(--txt);background:var(--b0)}
+.mode-tab.active{color:var(--acc);background:var(--acc-d)}
+.mode-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--acc)}
+.hdr-right{margin-left:auto;padding:0 18px;font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:1.5px}
+
+/* CONFIG BAR */
+.config-bar{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--b0);background:var(--s1);height:36px;flex-shrink:0;padding:0 16px}
+.cfg-label{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;margin-right:8px}
+.dim-btns{display:flex;gap:3px;margin-right:20px}
+.dim-btn{width:34px;height:20px;border-radius:3px;border:1px solid var(--b1);background:transparent;color:var(--txt2);font-family:var(--mono);font-size:9px;cursor:pointer;transition:all 0.12s;letter-spacing:0.3px}
+.dim-btn:hover{border-color:var(--b2);color:var(--txt)}
+.dim-btn.active{border-color:var(--acc);color:var(--acc);background:var(--acc-d)}
+.cfg-sep{width:1px;height:18px;background:var(--b0);margin:0 14px}
+.mod-wrap{display:none;align-items:center;gap:6px}
+.mod-wrap.show{display:flex}
+.mod-lbl{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:0.5px}
+.mod-inp{width:52px;height:20px;background:var(--s3);border:1px solid var(--b1);border-radius:3px;color:var(--acc);font-family:var(--mono);font-size:10px;text-align:center;outline:none;transition:border-color 0.12s;-moz-appearance:textfield}
+.mod-inp::-webkit-inner-spin-button,.mod-inp::-webkit-outer-spin-button{-webkit-appearance:none}
+.mod-inp:focus{border-color:var(--acc)}
+
+/* TOOLBAR */
+.toolbar{border-bottom:1px solid var(--b0);background:var(--s2);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.toolbar::-webkit-scrollbar{display:none}
+.tb-inner{display:flex;height:52px;align-items:stretch;min-width:max-content}
+.tb-group{display:flex;align-items:stretch;border-right:1px solid var(--b0)}
+.tb-glabel{display:flex;align-items:center;padding:0 9px;font-family:var(--mono);font-size:8px;color:var(--txt3);letter-spacing:1.2px;text-transform:uppercase;border-right:1px solid var(--b0);flex-shrink:0}
+.tb-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 13px;cursor:pointer;border:none;background:transparent;gap:3px;transition:all 0.12s;min-width:68px;position:relative;border-bottom:2px solid transparent}
+.tb-btn:hover{background:var(--b0)}
+.tb-btn.active{background:var(--acc-d);border-bottom-color:var(--acc)}
+.tb-sym{font-family:var(--mono);font-size:13px;color:var(--txt2);transition:color 0.12s;line-height:1}
+.tb-name{font-family:var(--mono);font-size:8px;color:var(--txt3);letter-spacing:0.3px;white-space:nowrap}
+.tb-btn:hover .tb-sym,.tb-btn.active .tb-sym{color:var(--acc)}
+.tb-btn:hover .tb-name,.tb-btn.active .tb-name{color:var(--acc)}
+
+/* B-MATRIX BAR */
+.b-bar{border-bottom:1px solid var(--b0);background:var(--s1);display:none;align-items:center;padding:8px 20px;gap:12px;flex-shrink:0;overflow-x:auto}
+.b-bar.show{display:flex}
+.b-lbl{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+.op-sym-big{font-family:var(--mono);font-size:22px;color:var(--txt3);line-height:1;padding:0 4px}
+.b-bracket{font-family:var(--mono);color:var(--txt3);font-size:22px;line-height:1;display:flex;flex-direction:column;justify-content:center;align-items:center;align-self:stretch}
+.b-grid{display:flex;flex-direction:column;gap:4px}
+.b-row{display:flex;gap:4px}
+.b-cell{width:36px;height:34px;background:var(--s3);border:1px solid var(--b1);border-radius:3px;color:var(--txt);font-family:var(--mono);font-size:12px;text-align:center;outline:none;transition:border-color 0.12s;-moz-appearance:textfield}
+.b-cell::-webkit-inner-spin-button,.b-cell::-webkit-outer-spin-button{-webkit-appearance:none}
+.b-cell:focus{border-color:var(--acc)}
+
+/* WORKSPACE */
+.workspace{flex:1;display:flex;min-height:0;overflow:hidden}
+
+/* LEFT PANEL */
+.left-panel{width:100px;flex-shrink:0;border-right:1px solid var(--b0);background:var(--s1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:14px}
+.left-panel.hidden{display:none}
+.sc-group{display:flex;flex-direction:column;gap:5px;align-items:center}
+.sc-lbl{font-family:var(--mono);font-size:8px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase}
+.sc-inp{width:60px;height:30px;background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--acc);font-family:var(--mono);font-size:14px;font-weight:400;text-align:center;outline:none;transition:border-color 0.12s;-moz-appearance:textfield}
+.sc-inp::-webkit-inner-spin-button,.sc-inp::-webkit-outer-spin-button{-webkit-appearance:none}
+.sc-inp:focus{border-color:var(--acc)}
+
+/* CENTER */
+.mat-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--bg);position:relative;min-width:0}
+.mat-top-lbl{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:1.5px;text-transform:uppercase}
+.mat-wrap{display:flex;align-items:center;gap:5px}
+.a-bracket{font-family:var(--mono);color:var(--b2);display:flex;flex-direction:column;justify-content:stretch;font-size:32px;line-height:1;user-select:none;align-self:stretch;align-items:center;justify-content:center}
+.a-grid{display:flex;flex-direction:column;gap:5px}
+.a-row{display:flex;gap:5px}
+.a-cell{width:56px;height:52px;background:var(--s2);border:1px solid var(--b0);border-radius:4px;color:var(--txt);font-family:var(--mono);font-size:16px;font-weight:300;text-align:center;outline:none;transition:all 0.12s;-moz-appearance:textfield}
+.a-cell::-webkit-inner-spin-button,.a-cell::-webkit-outer-spin-button{-webkit-appearance:none}
+.a-cell:hover{border-color:var(--b2)}
+.a-cell:focus{border-color:var(--acc);background:var(--acc-d);color:var(--acc)}
+.run-row{display:flex;gap:10px;align-items:center}
+.run-btn{padding:7px 20px;border-radius:3px;border:none;background:var(--acc);color:#000;font-family:var(--mono);font-size:10px;font-weight:500;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all 0.12s}
+.run-btn:hover{background:var(--acc2);transform:translateY(-1px)}
+.run-btn:active{transform:none}
+.run-hint{font-family:var(--mono);font-size:10px;color:var(--txt3)}
+
+/* RESULT PANEL */
+.res-panel{width:260px;flex-shrink:0;border-left:1px solid var(--b0);background:var(--s1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+.res-tag{font-family:var(--mono);font-size:8px;color:var(--txt3);letter-spacing:2px;text-transform:uppercase}
+.res-empty{font-family:var(--mono);font-size:10px;color:var(--txt3);text-align:center;line-height:2}
+.res-scalar{font-family:var(--mono);font-size:52px;font-weight:300;color:var(--acc);letter-spacing:-2px;line-height:1;text-align:center}
+.res-grid{display:flex;flex-direction:column;gap:4px}
+.res-row{display:flex;gap:4px}
+.res-cell{min-width:50px;height:38px;background:var(--s3);border:1px solid var(--b0);border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--acc);padding:0 5px}
+.res-err{font-family:var(--mono);font-size:10px;color:var(--err);background:var(--err-d);border:1px solid rgba(255,107,107,0.2);border-radius:3px;padding:10px 12px;text-align:center;line-height:1.7}
+.res-fn{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:0.5px;text-align:center}
+
+@keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
+.res-anim{animation:pop 0.18s ease}
+
+.wasm-notice{display:none;position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--err-d);border:1px solid rgba(255,107,107,0.3);border-radius:4px;padding:7px 14px;font-family:var(--mono);font-size:10px;color:var(--err);letter-spacing:0.3px;z-index:999;white-space:nowrap}
+.wasm-notice.show{display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ML</div>
+  <div class="mode-tabs">
+    <button class="mode-tab active" onclick="setMode('pure',this)">Álgebra Pura</button>
+    <button class="mode-tab" onclick="setMode('modular',this)">Álgebra Modular</button>
+  </div>
+  <div class="hdr-right">WASM · RUST</div>
+</header>
+
+<div class="config-bar">
+  <span class="cfg-label">Dimensión</span>
+  <div class="dim-btns">
+    <button class="dim-btn active" onclick="setDim(2,this)">2×2</button>
+    <button class="dim-btn" onclick="setDim(3,this)">3×3</button>
+  </div>
+  <div class="cfg-sep"></div>
+  <div class="mod-wrap" id="mod-wrap">
+    <span class="mod-lbl">mod m =</span>
+    <input type="number" class="mod-inp" id="global-mod" value="26" min="1"/>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="tb-inner" id="tb-pure">
+    <div class="tb-group">
+      <div class="tb-glabel">escalar</div>
+      <button class="tb-btn active" onclick="selectOp('det',this)">
+        <span class="tb-sym">det</span><span class="tb-name">Determinante</span>
+      </button>
+    </div>
+    <div class="tb-group">
+      <div class="tb-glabel">unarias</div>
+      <button class="tb-btn" onclick="selectOp('trans',this)">
+        <span class="tb-sym">Aᵀ</span><span class="tb-name">Transpuesta</span>
+      </button>
+      <button class="tb-btn" onclick="selectOp('adj',this)">
+        <span class="tb-sym">adj</span><span class="tb-name">Adjunta</span>
+      </button>
+      <button class="tb-btn" onclick="selectOp('inv',this)">
+        <span class="tb-sym">A⁻¹</span><span class="tb-name">Inversa</span>
+      </button>
+    </div>
+    <div class="tb-group">
+      <div class="tb-glabel">con escalar</div>
+      <button class="tb-btn" onclick="selectOp('esc',this)">
+        <span class="tb-sym">×k</span><span class="tb-name">Escalar ℤ</span>
+      </button>
+      <button class="tb-btn" onclick="selectOp('escf',this)">
+        <span class="tb-sym">×f</span><span class="tb-name">Escalar ℝ</span>
+      </button>
+    </div>
+    <div class="tb-group">
+      <div class="tb-glabel">binarias</div>
+      <button class="tb-btn" onclick="selectOp('add',this)">
+        <span class="tb-sym">A+B</span><span class="tb-name">Suma</span>
+      </button>
+      <button class="tb-btn" onclick="selectOp('mul',this)">
+        <span class="tb-sym">A·B</span><span class="tb-name">Producto</span>
+      </button>
+    </div>
+  </div>
+  <div class="tb-inner" id="tb-modular" style="display:none">
+    <div class="tb-group">
+      <div class="tb-glabel">módulo</div>
+      <button class="tb-btn active" onclick="selectOp('mmod',this)">
+        <span class="tb-sym">A%m</span><span class="tb-name">Módulo</span>
+      </button>
+      <button class="tb-btn" onclick="selectOp('minv',this)">
+        <span class="tb-sym">A⁻¹</span><span class="tb-name">Inversa mod</span>
+      </button>
+    </div>
+    <div class="tb-group">
+      <div class="tb-glabel">con escalar</div>
+      <button class="tb-btn" onclick="selectOp('mesc',this)">
+        <span class="tb-sym">k·m</span><span class="tb-name">Escalar mod</span>
+      </button>
+    </div>
+    <div class="tb-group">
+      <div class="tb-glabel">binarias</div>
+      <button class="tb-btn" onclick="selectOp('madd',this)">
+        <span class="tb-sym">+m</span><span class="tb-name">Suma mod</span>
+      </button>
+      <button class="tb-btn" onclick="selectOp('mmul',this)">
+        <span class="tb-sym">·m</span><span class="tb-name">Producto mod</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- B-MATRIX BAR (binary ops) -->
+<div class="b-bar" id="b-bar">
+  <span class="b-lbl">Matriz B</span>
+  <div class="b-bracket">[</div>
+  <div id="b-grid"></div>
+  <div class="b-bracket">]</div>
+  <span class="op-sym-big" id="op-sym-display">+</span>
+  <span style="font-family:var(--mono);font-size:9px;color:var(--txt3)">↑ presiona ejecutar abajo</span>
+</div>
+
+<div class="workspace">
+  <!-- LEFT: scalar -->
+  <div class="left-panel hidden" id="left-panel">
+    <div class="sc-group" id="sc-k" style="display:none">
+      <span class="sc-lbl">escalar k</span>
+      <input type="number" class="sc-inp" id="inp-k" value="3"/>
+    </div>
+    <div class="sc-group" id="sc-f" style="display:none">
+      <span class="sc-lbl">factor f</span>
+      <input type="number" class="sc-inp" id="inp-f" value="0.5" step="0.1"/>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="mat-center">
+    <span class="mat-top-lbl">Matriz A</span>
+    <div class="mat-wrap">
+      <div class="a-bracket">[</div>
+      <div id="a-grid"></div>
+      <div class="a-bracket">]</div>
+    </div>
+    <div class="run-row">
+      <button class="run-btn" onclick="runOp()">Ejecutar</button>
+      <span class="run-hint" id="run-hint">det(A)</span>
+    </div>
+  </div>
+
+  <!-- RIGHT: result -->
+  <div class="res-panel">
+    <span class="res-tag">resultado</span>
+    <div id="res-display"><div class="res-empty">presiona<br/>ejecutar</div></div>
+    <span class="res-fn" id="res-fn"></span>
+  </div>
+</div>
+
+<div class="wasm-notice" id="wasm-notice">WASM no cargado — ajusta la ruta del pkg en el script</div>
+
+<script type="module">
+import init, {
+  matrix_determinant, matrix_transposed, matrix_adjugate, matrix_inverse,
+  matrix_addition, matrix_multiplication_matrix,
+  matrix_multiplication_escalar, matrix_multiplication_escalar_f,
+  matrix_module, matrix_inverse_module, matrix_addition_module,
+  matrix_multiplication_matrix_module, matrix_multiplication_escalar_module,
+} from './matrix_operations.js'; // ← AJUSTA ESTE PATH
+
+let wasmReady = false, dim = 2, op = 'det', mode = 'pure';
+
+const binaryOps  = new Set(['add','mul','madd','mmul']);
+const scalarKOps = new Set(['esc','mesc']);
+const scalarFOps = new Set(['escf']);
+const opSymbols  = {add:'+', mul:'·', madd:'+', mmul:'·'};
+const opHints    = {
+  det:'det(A)', trans:'Aᵀ', adj:'adj(A)', inv:'A⁻¹',
+  esc:'k · A', escf:'f · A',
+  add:'A + B', mul:'A · B',
+  mmod:'A mod m', minv:'A⁻¹ mod m',
+  madd:'(A+B) mod m', mmul:'(A·B) mod m', mesc:'(k·A) mod m',
+};
+
+function buildGrid(id, n, cellCls, size) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  const g = document.createElement('div');
+  g.style.cssText = 'display:flex;flex-direction:column;gap:'+(cellCls==='a-cell'?5:4)+'px';
+  const cells = [];
+  for (let i=0;i<n;i++){
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;gap:'+(cellCls==='a-cell'?5:4)+'px';
+    for(let j=0;j<n;j++){
+      const inp=document.createElement('input');
+      inp.type='number'; inp.className=cellCls;
+      inp.value=(i===j)?1:0;
+      if(size){inp.style.width=size+'px';inp.style.height=size+'px'}
+      inp.dataset.idx = i*n+j;
+      cells.push(inp);
+      row.appendChild(inp);
+    }
+    g.appendChild(row);
+  }
+  el.appendChild(g);
+
+  // Enter-key navigation
+  const isA = (id === 'a-grid');
+  cells.forEach((inp, idx) => {
+    inp.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const next = cells[idx + 1];
+      if (next) {
+        next.focus(); next.select();
+      } else if (isA && binaryOps.has(op)) {
+        // A finished, binary op → jump to first cell of B
+        const bFirst = document.querySelector('#b-grid input');
+        if (bFirst) { bFirst.focus(); bFirst.select(); }
+      } else {
+        // last cell of A (unary) or last cell of B → execute
+        window.runOp();
+      }
+    });
+  });
+}
+
+function readGrid(id){
+  return Array.from(document.getElementById(id).querySelectorAll('input')).map(c=>parseInt(c.value)||0);
+}
+
+function rebuild(){
+  buildGrid('a-grid', dim, 'a-cell');
+  buildGrid('b-grid', dim, 'b-cell');
+  updateUI();
+}
+
+function updateUI(){
+  const isBin   = binaryOps.has(op);
+  const needsK  = scalarKOps.has(op);
+  const needsF  = scalarFOps.has(op);
+  const needsLeft = needsK || needsF;
+
+  document.getElementById('b-bar').classList.toggle('show', isBin);
+  document.getElementById('left-panel').classList.toggle('hidden', !needsLeft);
+  document.getElementById('sc-k').style.display = needsK ? 'flex':'none';
+  document.getElementById('sc-f').style.display = needsF ? 'flex':'none';
+  document.getElementById('op-sym-display').textContent = opSymbols[op]||'';
+  document.getElementById('run-hint').textContent = opHints[op]||op;
+  document.getElementById('mod-wrap').classList.toggle('show', mode==='modular');
+}
+
+function clearResult(){
+  document.getElementById('res-display').innerHTML='<div class="res-empty">—</div>';
+  document.getElementById('res-fn').textContent='';
+}
+
+function showScalar(v){
+  const el=document.getElementById('res-display');
+  el.className='res-anim';
+  el.innerHTML=`<div class="res-scalar">${v}</div>`;
+}
+
+function showMatrix(arr, n, isFloat){
+  const el=document.getElementById('res-display');
+  el.className='res-anim';
+  let html='<div class="res-grid">';
+  for(let i=0;i<n;i++){
+    html+='<div class="res-row">';
+    for(let j=0;j<n;j++){
+      const v=arr[i*n+j];
+      html+=`<div class="res-cell">${isFloat?Number(v).toFixed(3):v}</div>`;
+    }
+    html+='</div>';
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function showErr(msg){
+  const el=document.getElementById('res-display');
+  el.className='res-anim';
+  el.innerHTML=`<div class="res-err">${msg}</div>`;
+  document.getElementById('res-fn').textContent='';
+}
+
+window.runOp = () => {
+  if(!wasmReady){document.getElementById('wasm-notice').classList.add('show');return;}
+  const A=new Int32Array(readGrid('a-grid'));
+  const B=new Int32Array(readGrid('b-grid'));
+  const k=parseInt(document.getElementById('inp-k').value)||1;
+  const f=parseFloat(document.getElementById('inp-f').value)||1.0;
+  const m=parseInt(document.getElementById('global-mod').value)||26;
+
+  try{
+    let res, isFloat=false, isScalar=false;
+    switch(op){
+      case 'det':  res=matrix_determinant(A); isScalar=true; break;
+      case 'trans':res=matrix_transposed(A); break;
+      case 'adj':  res=matrix_adjugate(A); break;
+      case 'inv':  res=matrix_inverse(A); isFloat=true; break;
+      case 'esc':  res=matrix_multiplication_escalar(A,k); break;
+      case 'escf': res=matrix_multiplication_escalar_f(A,f); isFloat=true; break;
+      case 'add':  res=matrix_addition(A,B); break;
+      case 'mul':  res=matrix_multiplication_matrix(A,B); break;
+      case 'mmod': res=matrix_module(A,m); break;
+      case 'minv': res=matrix_inverse_module(A,m); break;
+      case 'madd': res=matrix_addition_module(A,B,m); break;
+      case 'mmul': res=matrix_multiplication_matrix_module(A,B,m); break;
+      case 'mesc': res=matrix_multiplication_escalar_module(A,k,m); break;
+    }
+    document.getElementById('res-fn').textContent=opHints[op]||'';
+    if(isScalar){ showScalar(res); return; }
+    if(!res||res.length===0){ showErr('No existe<br>(det = 0 o sin inversa modular)'); return; }
+    showMatrix(res, dim, isFloat);
+  } catch(e){ showErr(e.message); }
+};
+
+window.setDim=(n,btn)=>{
+  dim=n;
+  document.querySelectorAll('.dim-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  rebuild(); clearResult();
+};
+
+window.setMode=(m,btn)=>{
+  mode=m;
+  document.querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tb-pure').style.display   = m==='pure'?'flex':'none';
+  document.getElementById('tb-modular').style.display= m==='modular'?'flex':'none';
+  // pick first op of that toolbar
+  const firstBtn=document.querySelector(`#tb-${m} .tb-btn`);
+  if(firstBtn){ firstBtn.classList.add('active'); op=firstBtn.getAttribute('onclick').match(/'(\w+)'/)[1]; }
+  updateUI(); clearResult();
+};
+
+window.selectOp=(o,btn)=>{
+  op=o;
+  document.querySelectorAll('.tb-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  updateUI(); clearResult();
+};
+
+async function boot(){
+  try{ await init(); wasmReady=true; }
+  catch(e){ document.getElementById('wasm-notice').classList.add('show'); }
+  rebuild();
+}
+boot();
+</script>
+</body>
+</html>
