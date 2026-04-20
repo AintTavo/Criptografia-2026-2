@@ -67,6 +67,10 @@ header{display:flex;align-items:center;border-bottom:1px solid var(--b0);backgro
 .b-cell{width:36px;height:34px;background:var(--s3);border:1px solid var(--b1);border-radius:3px;color:var(--txt);font-family:var(--mono);font-size:12px;text-align:center;outline:none;transition:border-color 0.12s;-moz-appearance:textfield}
 .b-cell::-webkit-inner-spin-button,.b-cell::-webkit-outer-spin-button{-webkit-appearance:none}
 .b-cell:focus{border-color:var(--acc)}
+.b-transfer-group{display:flex;flex-direction:column;gap:4px;margin-left:auto;padding-left:12px;border-left:1px solid var(--b0);flex-shrink:0}
+.b-xfer-btn{padding:4px 10px;border-radius:3px;border:1px solid var(--b1);background:transparent;color:var(--txt2);font-family:var(--mono);font-size:9px;cursor:pointer;letter-spacing:0.4px;transition:all 0.14s;white-space:nowrap;text-align:center}
+.b-xfer-btn:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-d)}
+.b-xfer-btn:active{transform:scale(0.97)}
 
 /* WORKSPACE */
 .workspace{flex:1;display:flex;min-height:0;overflow:hidden}
@@ -107,6 +111,7 @@ header{display:flex;align-items:center;border-bottom:1px solid var(--b0);backgro
 .res-cell{min-width:50px;height:38px;background:var(--s3);border:1px solid var(--b0);border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--acc);padding:0 5px}
 .res-err{font-family:var(--mono);font-size:10px;color:var(--err);background:var(--err-d);border:1px solid rgba(255,107,107,0.2);border-radius:3px;padding:10px 12px;text-align:center;line-height:1.7}
 .res-fn{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:0.5px;text-align:center}
+.res-verified{font-family:var(--mono);font-size:10px;color:#4ade80;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.22);border-radius:3px;padding:6px 12px;text-align:center;letter-spacing:0.5px;margin-top:2px}
 
 @keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
 .res-anim{animation:pop 0.18s ease}
@@ -214,6 +219,11 @@ header{display:flex;align-items:center;border-bottom:1px solid var(--b0);backgro
   <div class="b-bracket">]</div>
   <span class="op-sym-big" id="op-sym-display">+</span>
   <span style="font-family:var(--mono);font-size:9px;color:var(--txt3)">↑ presiona ejecutar abajo</span>
+  <div class="b-transfer-group">
+    <button class="b-xfer-btn" onclick="transferB2A()" title="Copiar valores de B a A">B → A</button>
+    <button class="b-xfer-btn" onclick="swapAB()" title="Intercambiar A y B">A ↔ B</button>
+    <button class="b-xfer-btn" onclick="transferA2B()" title="Copiar valores de A a B">A → B</button>
+  </div>
 </div>
 
 <div class="workspace">
@@ -407,6 +417,11 @@ window.runOp = () => {
     if(isScalar){ showScalar(res); return; }
     if(!res||res.length===0){ showErr('No existe<br>(det = 0 o sin inversa modular)'); return; }
     showMatrix(res, dim, isFloat);
+    // Show verification badge for successful modular inverse
+    if(op==='minv'){
+      const el=document.getElementById('res-display');
+      el.insertAdjacentHTML('beforeend','<div class="res-verified">✓ Verificado Exitosamente</div>');
+    }
   } catch(e){ showErr(e.message); }
 };
 
@@ -427,6 +442,26 @@ window.setMode=(m,btn)=>{
   const firstBtn=document.querySelector(`#tb-${m} .tb-btn`);
   if(firstBtn){ firstBtn.classList.add('active'); op=firstBtn.getAttribute('onclick').match(/'(\w+)'/)[1]; }
   updateUI(); clearResult();
+};
+
+window.transferB2A=()=>{
+  const bCells=document.querySelectorAll('#b-grid input');
+  const aCells=document.querySelectorAll('#a-grid input');
+  bCells.forEach((b,i)=>{ if(aCells[i]) aCells[i].value=b.value; });
+};
+window.transferA2B=()=>{
+  const aCells=document.querySelectorAll('#a-grid input');
+  const bCells=document.querySelectorAll('#b-grid input');
+  aCells.forEach((a,i)=>{ if(bCells[i]) bCells[i].value=a.value; });
+};
+window.swapAB=()=>{
+  const aCells=document.querySelectorAll('#a-grid input');
+  const bCells=document.querySelectorAll('#b-grid input');
+  aCells.forEach((a,i)=>{
+    if(bCells[i]){
+      const tmp=a.value; a.value=bCells[i].value; bCells[i].value=tmp;
+    }
+  });
 };
 
 window.selectOp=(o,btn)=>{
