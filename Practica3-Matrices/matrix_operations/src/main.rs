@@ -1,8 +1,10 @@
 use colored::Colorize;
 
-/*  --------------------------------------------------------------------------------
+/*  
+    --------------------------------------------------------------------------------
     Test Area : Funcion Main
-*/  --------------------------------------------------------------------------------
+    --------------------------------------------------------------------------------
+*/  
 
 fn main() {
     let matrix_0 = [5 , 17, 20, 9, 23, 3, 2, 11, 13];
@@ -15,8 +17,9 @@ fn main() {
     println!("{}", "Matriz 0  cofactor 0,0:".blue());
     print_matrix(&matrix_cofactor(&matrix_0, 0,0));
     println!("{} {}","Determinante 1:".blue(), matrix_determinant(&matrix_cofactor(&matrix_0, 0,0)));
+    print_matrix(&matrix_inverse_module(&matrix_0, 27));
     print_matrix_f(&matrix_inverse(&matrix_0));
-    
+    matrix_addition_module(&matrix_0,&matrix_0,5);
 
     /*
     println!();
@@ -41,9 +44,11 @@ fn main() {
     */
 }
 
-/*  --------------------------------------------------------------------------------
+/*  
+    --------------------------------------------------------------------------------
     Main code : Algebra lineal pura
-*/  --------------------------------------------------------------------------------
+    --------------------------------------------------------------------------------
+*/  
 
 // -> Función para calcular la matriz inversa
 fn matrix_inverse ( matrix : &[i32] ) -> Vec<f64> {
@@ -226,7 +231,7 @@ fn matrix_addition( matrix_a : &[i32] , matrix_b : &[i32] ) -> Vec<i32> {
 
 // -> Funcion para multiplicar una matriz con otra mnatriz solo si es 3x3 o 2x2
 fn matrix_multiplication_matrix( matrix_a : &[i32] , matrix_b : &[i32] ) -> Vec<i32> {
-    let mut tmp_matrix : Vec<i32> = Vec::new();
+    let tmp_matrix : Vec<i32> = Vec::new();
     return tmp_matrix;
 }
 
@@ -252,9 +257,11 @@ fn matrix_multiplication_escalar_f( matrix : &[i32] , escalar : f64 ) -> Vec<f64
     return tmp_matrix;
 }
 
-/*  --------------------------------------------------------------------------------
-    Main Code : Algebra modular
-*/  --------------------------------------------------------------------------------
+/*  
+    --------------------------------------------------------------------------------
+    Main Code : Algebra lineal modular
+    --------------------------------------------------------------------------------
+*/
 
 // -> Funcion para sacar el modulo de una matriz con un modulo m
 fn matrix_module( matrix : &[i32] , m : u32 ) -> Vec<i32> {
@@ -269,24 +276,26 @@ fn matrix_module( matrix : &[i32] , m : u32 ) -> Vec<i32> {
     return tmp_matrix;
 }
 
-fn euclid( a : i32, b: i32 ) -> i32 {
-    if b == 0 {
-        return a;
+fn matrix_inverse_module(matrix : &[i32] , m : u32) -> Vec<i32> {
+    let mut _tmp_determinant = matrix_determinant(&matrix);
+    let mut result : Vec<i32> = Vec::new();
+    if _tmp_determinant == 0 {
+        error("The inverse matrix does not exist. The determinant is equal to 0.");
+        return result;
     }
-    else {
-        return euclid(b, a%b);
-    }
+    _tmp_determinant = module(_tmp_determinant, m) as i32;
+    _tmp_determinant = euclid_extended(m as i32, _tmp_determinant);
+    result = matrix_adjugate(&matrix);
+    result = matrix_multiplication_escalar(&result, _tmp_determinant);
+    result = matrix_module(&result, m);
+
+    return result;
 }
 
-fn euclid_valid( n_length : i32 , alpha : i32 ) -> bool {
-    let a = if n_length > alpha { n_length } else { alpha };
-    let b = if n_length > alpha { alpha } else { n_length };
-
-    let mcd : i32 = euclid(a, b);
-    if mcd == 1 {
-        return true;
-    }
-    return false;
+fn matrix_addition_module( matrix_a : &[i32] , matrix_b : &[i32] , m : u32 ) -> Vec<i32> {
+    let tmp_matrix = matrix_addition(&matrix_a, &matrix_b);
+    let tmp_matrix = matrix_module(&tmp_matrix, m);
+    return tmp_matrix;
 }
 
 fn euclid_extended( n_length : i32, alpha : i32 ) -> i32 {
@@ -307,7 +316,7 @@ fn euclid_extended( n_length : i32, alpha : i32 ) -> i32 {
         return out;
     }
     else {
-        return out%n_length;
+        return module(out, n_length as u32) as i32;
     }
 }
 
@@ -329,20 +338,13 @@ fn xgcd_rec( a : i32 , b : i32 ) -> ( i32, i32, i32 ) {
 }
 
 
-fn matrix_inverse_module(matrix : &[i32] , m : i32) -> Vec<i32> {
-    let _tmp_determinant = matrix_determinant(&matrix);
-    if _tmp_determinant == 0 {
-        error("The inverse matrix does not exist. The determinant is equal to 0.");
-        let result : Vec<f64> = Vec::new();
-        return result;
-    }
 
-    
-}
 
-/*  --------------------------------------------------------------------------------
+/*  
+    --------------------------------------------------------------------------------
     Tool functions : Funciones que sirven principalmente como herramientas para el resto del desarrollo.
-*/  --------------------------------------------------------------------------------
+    --------------------------------------------------------------------------------
+*/  
 
 // -> Función para devolver un valor a partir de solo sus cordenadas, ademas si las cordenadas se pasan o son negativas se les aplica un modulo
 fn find_in_matrix( matrix: &[i32] , size : u32 , row : i32 , column : i32 ) -> i32 {
