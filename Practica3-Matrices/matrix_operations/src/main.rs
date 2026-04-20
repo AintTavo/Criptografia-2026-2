@@ -20,7 +20,7 @@ fn main() {
     print_matrix(&matrix_inverse_module(&matrix_0, 27));
     print_matrix_f(&matrix_inverse(&matrix_0));
     matrix_addition_module(&matrix_0,&matrix_0,5);
-
+    print_matrix(&matrix_multiplication_matrix_module(&matrix_0, &matrix_inverse_module(&matrix_0, 27), 27));
     /*
     println!();
     let matrix_1 = [0, 1, 2, 3];
@@ -231,10 +231,43 @@ fn matrix_addition( matrix_a : &[i32] , matrix_b : &[i32] ) -> Vec<i32> {
 
 // -> Funcion para multiplicar una matriz con otra mnatriz solo si es 3x3 o 2x2
 fn matrix_multiplication_matrix( matrix_a : &[i32] , matrix_b : &[i32] ) -> Vec<i32> {
-    let tmp_matrix : Vec<i32> = Vec::new();
+    let mut tmp_matrix : Vec<i32> = Vec::new();
+
+    let _size_a = matrix_a.len();
+    let _size_b = matrix_b.len();
+
+    // Reutilizamos tu lógica de validación (basada en matrix_addition)
+    if !( _size_a == _size_b ) {
+        println!("Error: The dimensions of the matrices must be the same.");
+        tmp_matrix.push(-1);
+        return tmp_matrix;
+    }
+
+    // Validamos que sea 2x2 o 3x3 como pide tu comentario
+    if !matrix_validation(_size_a) {
+        tmp_matrix.push(-1);
+        return tmp_matrix;
+    }
+
+    // Calculamos n (la raíz cuadrada) para saber si es 2 o 3
+    let n = (_size_a as f64).sqrt() as u32;
+
+    // Algoritmo de multiplicación
+    for row in 0..n {
+        for col in 0..n {
+            let mut sum = 0;
+            for k in 0..n {
+                // Usamos tu función find_in_matrix para obtener los valores
+                let val_a = find_in_matrix(matrix_a, n, row as i32, k as i32);
+                let val_b = find_in_matrix(matrix_b, n, k as i32, col as i32);
+                sum += val_a * val_b;
+            }
+            tmp_matrix.push(sum);
+        }
+    }
+    
     return tmp_matrix;
 }
-
 
 // -> Funcion para multiplicar una matriz con un numero escalar
 fn matrix_multiplication_escalar( matrix : &[i32] , escalar : i32 ) -> Vec<i32> {
@@ -286,14 +319,24 @@ fn matrix_inverse_module(matrix : &[i32] , m : u32) -> Vec<i32> {
     _tmp_determinant = module(_tmp_determinant, m) as i32;
     _tmp_determinant = euclid_extended(m as i32, _tmp_determinant);
     result = matrix_adjugate(&matrix);
-    result = matrix_multiplication_escalar(&result, _tmp_determinant);
-    result = matrix_module(&result, m);
-
+    result = matrix_multiplication_escalar_module(&result, _tmp_determinant, m);
     return result;
 }
 
 fn matrix_addition_module( matrix_a : &[i32] , matrix_b : &[i32] , m : u32 ) -> Vec<i32> {
     let tmp_matrix = matrix_addition(&matrix_a, &matrix_b);
+    let tmp_matrix = matrix_module(&tmp_matrix, m);
+    return tmp_matrix;
+}
+
+fn matrix_multiplication_matrix_module( matrix_a : &[i32], matrix_b : &[i32], m : u32 ) -> Vec<i32> {
+    let tmp_matrix = matrix_multiplication_matrix(&matrix_a, &matrix_b);
+    let tmp_matrix = matrix_module(&tmp_matrix, m);
+    return tmp_matrix;
+}
+
+fn matrix_multiplication_escalar_module( matrix : &[i32] , escalar : i32 , m : u32 ) -> Vec<i32> {
+    let tmp_matrix = matrix_multiplication_escalar(&matrix, escalar);
     let tmp_matrix = matrix_module(&tmp_matrix, m);
     return tmp_matrix;
 }
@@ -336,8 +379,6 @@ fn xgcd_rec( a : i32 , b : i32 ) -> ( i32, i32, i32 ) {
         return (d, x, y);
     }
 }
-
-
 
 
 /*  
