@@ -23,11 +23,27 @@ fn main() {
     let determinant = matrix_determinant(&matrix_1);
     println!("{} {}", "Determinante 2:".blue(), determinant);
 
+    println!();
+    let matrix_2 = [1 , 2, 3, 4, 5, 6, 7, 8, 9];
+    println!("{}", "Matriz original 2 :".blue());
+    print_matrix(&matrix_2);
+    println!("{}", "Matriz 2 + Matriz 1 :".blue());
+    print_matrix(&matrix_addition(&matrix_2,&matrix_0));
+    println!("{}", "Matriz 2 * 5 :".blue());
+    print_matrix(&matrix_multiplication_escalar(&matrix_2,5));
+    println!("{}", "Matriz 2 * 5 mod 20 :".blue());
+    print_matrix(&matrix_module(&matrix_multiplication_escalar(&matrix_2, 5), 20));
+
 }
 
 /*
     Main code : Funciones principales
 */
+
+// -> Función para calcular la matriz inversa
+fn matrix_inverse( matrix : &[i32] ) {
+
+}
 
 
 // -> Funcion para determinar la determinante de una matriz, solo si esta es 3x3 o 2x2
@@ -38,7 +54,7 @@ fn matrix_determinant( matrix : &[i32] ) -> i32 {
     // corrección de errores :
     // En caso de que su raiz cuadrada tenga decimales (no es un numero cuadrado) regresa un error
     if size != size.trunc() {
-        println!("{} {}","Error:".red().bold(), "This function only accept square matrices".red());
+        error("This function only accept square matrices");
         return -1;
     }
 
@@ -48,7 +64,7 @@ fn matrix_determinant( matrix : &[i32] ) -> i32 {
     // Corrección de errores : 
     // si esta es de mayor tamaño a 3 la función termina
     if size > 3 {
-        println!("{} {}","Error:".red().bold(), "The function only acceps square matrices of 1 to 2".red());
+        error("The function only acceps square matrices of 1 to 2");
         return -1;
     }
 
@@ -92,7 +108,7 @@ fn matrix_determinant( matrix : &[i32] ) -> i32 {
 }
 
 
-
+// -> Función para calcular la matriz transpuesta de una matriz, solo si es 3x3 y 2x2
 fn matrix_transposed( matrix : &[i32] ) -> Vec<i32> {
     let mut tmp_matrix : Vec<i32> = Vec::new();
     let size = matrix.len();
@@ -109,7 +125,73 @@ fn matrix_transposed( matrix : &[i32] ) -> Vec<i32> {
         }
     }
     
-    
+    return tmp_matrix;
+}
+
+// -> Función para calcular la matriz adjunta de una matriz, solo si es 3x3 o 2x2 
+fn matrix_adjugate(matrix : &[i32] ) -> Vec<i32> {
+    let mut tmp_matrix : Vec<i32> = Vec::new();
+    let size = matrix.len();
+    if !matrix_validation(size) { 
+        error("The size of the matrix is not the size of a square matrix");
+        tmp_matrix.push(-1);
+        return tmp_matrix;
+    }
+    debug("2x2", "llegada a matriz 2 x 2");
+    return tmp_matrix;
+}
+
+// -> Funcion para sumar una matriz con otra matriz
+fn matrix_addition( matrix_a : &[i32] , matrix_b : &[i32] ) -> Vec<i32> {
+    let mut tmp_matrix : Vec<i32> = Vec::new();
+
+    let _size_a = matrix_a.len();
+    let _size_b = matrix_b.len();
+
+    // corrección de errores :
+    // Checa si el tamaño de las matrices es identico
+    if !( _size_a == _size_b ) {
+        error("The dimensions of the matrices muss be the same.");
+        tmp_matrix.push(-1);
+        return tmp_matrix;
+    }
+
+    for i in 0.._size_a {
+        tmp_matrix.push( matrix_a[i] + matrix_b[i] );
+    }
+
+    return tmp_matrix;
+}
+
+
+// -> Funcion para multiplicar una matriz con otra mnatriz solo si es 3x3 o 2x2
+fn matrix_multiplication_matrix( matrix_a : &[i32] , matrix_b : &[i32] ) -> Vec<i32> {
+    let mut tmp_matrix : Vec<i32> = Vec::new();
+    return tmp_matrix;
+}
+
+
+// -> Funcion para multiplicar una matriz con un numero escalar
+fn matrix_multiplication_escalar( matrix : &[i32] , escalar : i32 ) -> Vec<i32> {
+    let mut tmp_matrix : Vec<i32> = Vec::new();
+
+    let _size = matrix.len();
+    for i in 0.._size {
+        tmp_matrix.push( matrix[i] * escalar );
+    }
+    return tmp_matrix;
+}
+
+// -> Funcion para sacar el modulo de una matriz con un modulo m
+fn matrix_module( matrix : &[i32] , m : u32 ) -> Vec<i32> {
+    let mut tmp_matrix : Vec<i32> = Vec::new();
+
+    let _size = matrix.len();
+
+    for i in 0.._size {
+        tmp_matrix.push( module(matrix[i] ,  m) as i32);
+    }
+
     return tmp_matrix;
 }
 
@@ -152,6 +234,7 @@ fn print_matrix(matrix: &[i32]) {
     }
 }
 
+// -> Función para verificar el tamaño de una matriz, que sea 3x3 o 2x2
 fn matrix_validation(size : usize) -> bool {
     let size = size as f64;
     let size = size.sqrt();
@@ -174,4 +257,19 @@ fn matrix_validation(size : usize) -> bool {
     }
 
     return true;
+}
+
+
+// -> Función para imprimir una saldia formateada para error
+fn error( message : &str ) {
+    println!("{} {}", "Error:".red().bold(), message.red());
+} 
+
+
+// -> Función para imprimir una salida formateada para debug
+fn debug(label : &str,  message : &str ) {
+    print!("{}", "Debug [".yellow().bold());
+    print!("{}", label.yellow().italic());
+    print!("{} ", "]: ".yellow().bold());
+    println!("{}", message.yellow());
 }
