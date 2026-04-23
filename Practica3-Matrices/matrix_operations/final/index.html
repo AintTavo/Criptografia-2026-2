@@ -112,6 +112,11 @@ header{display:flex;align-items:center;border-bottom:1px solid var(--b0);backgro
 .res-err{font-family:var(--mono);font-size:10px;color:var(--err);background:var(--err-d);border:1px solid rgba(255,107,107,0.2);border-radius:3px;padding:10px 12px;text-align:center;line-height:1.7}
 .res-fn{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:0.5px;text-align:center}
 .res-verified{font-family:var(--mono);font-size:10px;color:#4ade80;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.22);border-radius:3px;padding:6px 12px;text-align:center;letter-spacing:0.5px;margin-top:2px}
+.res-xfer{display:flex;gap:6px;margin-top:8px;justify-content:center;flex-wrap:wrap}
+.res-xfer-btn{padding:5px 12px;border-radius:3px;border:1px solid var(--b1);background:transparent;color:var(--txt2);font-family:var(--mono);font-size:9px;cursor:pointer;letter-spacing:0.6px;transition:all 0.14s;text-transform:uppercase}
+.res-xfer-btn:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-d)}
+.res-xfer-btn:active{transform:scale(0.97)}
+.res-xfer-btn:disabled{opacity:0.35;cursor:not-allowed;border-color:var(--b0);color:var(--txt3);background:transparent}
 
 @keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
 .res-anim{animation:pop 0.18s ease}
@@ -258,6 +263,10 @@ header{display:flex;align-items:center;border-bottom:1px solid var(--b0);backgro
     <span class="res-tag">resultado</span>
     <div id="res-display"><div class="res-empty">presiona<br/>ejecutar</div></div>
     <span class="res-fn" id="res-fn"></span>
+    <div class="res-xfer" id="res-xfer" style="display:none">
+      <button class="res-xfer-btn" onclick="transferResult('A')" title="Usar resultado como matriz A">→ A</button>
+      <button class="res-xfer-btn" onclick="transferResult('B')" title="Usar resultado como matriz B">→ B</button>
+    </div>
   </div>
 </div>
 
@@ -273,6 +282,7 @@ import init, {
 } from './matrix_operations.js'; // ← AJUSTA ESTE PATH
 
 let wasmReady = false, dim = 2, op = 'det', mode = 'pure';
+let lastResult = null; // { data:number[], n:number, isFloat:boolean }
 
 const binaryOps  = new Set(['add','mul','madd','mmul']);
 const scalarKOps = new Set(['esc','mesc']);
@@ -354,15 +364,23 @@ function updateUI(){
   document.getElementById('mod-wrap').classList.toggle('show', mode==='modular');
 }
 
+function setXferVisible(show){
+  document.getElementById('res-xfer').style.display = show ? 'flex' : 'none';
+}
+
 function clearResult(){
   document.getElementById('res-display').innerHTML='<div class="res-empty">—</div>';
   document.getElementById('res-fn').textContent='';
+  lastResult = null;
+  setXferVisible(false);
 }
 
 function showScalar(v){
   const el=document.getElementById('res-display');
   el.className='res-anim';
   el.innerHTML=`<div class="res-scalar">${v}</div>`;
+  lastResult = null;
+  setXferVisible(false);
 }
 
 function showMatrix(arr, n, isFloat){
@@ -379,6 +397,8 @@ function showMatrix(arr, n, isFloat){
   }
   html+='</div>';
   el.innerHTML=html;
+  lastResult = { data: Array.from(arr), n, isFloat: !!isFloat };
+  setXferVisible(true);
 }
 
 function showErr(msg){
@@ -386,7 +406,23 @@ function showErr(msg){
   el.className='res-anim';
   el.innerHTML=`<div class="res-err">${msg}</div>`;
   document.getElementById('res-fn').textContent='';
+  lastResult = null;
+  setXferVisible(false);
 }
+
+window.transferResult = (target) => {
+  if(!lastResult) return;
+  // If result dimension differs from current dim (shouldn't happen today,
+  // but guard in case of future ops), fail softly.
+  if(lastResult.n !== dim) return;
+  const gridId = target === 'B' ? 'b-grid' : 'a-grid';
+  const cells = document.querySelectorAll('#'+gridId+' input');
+  if(!cells.length) return;
+  lastResult.data.forEach((v,i)=>{
+    if(!cells[i]) return;
+    cells[i].value = lastResult.isFloat ? Number(v).toFixed(3) : v;
+  });
+};
 
 window.runOp = () => {
   if(!wasmReady){document.getElementById('wasm-notice').classList.add('show');return;}
