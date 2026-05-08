@@ -22,6 +22,12 @@ fn main() {
     let cipher_text_cbc = modus_cbc_hc(&mesage, 3, &init, &key, m);
     debug_block("cipher Text CBC", &cipher_text_cbc);
 
+    let cipher_text_cfb = modus_cfb_hc(&mesage, 3, &init, &key, m);
+    debug_block("cipher Text CFB", &cipher_text_cfb);
+
+    let cipher_text_ofb = modus_ofb_hc(&mesage, 3, &init, &key, m);
+    debug_block("cipher Text OFB", &cipher_text_ofb);
+
     let tmp_block = block_xor(&block, &block_2);
     debug_block("Xor", &tmp_block);
 
@@ -32,6 +38,7 @@ fn main() {
     Main : Función principal del programa, aquí se ejecuta el código principal del programa, y se llama a las funciones necesarias para el desarrollo del programa.
     --------------------------------------------------------------------------------
 */  
+
 
 fn hill_cipher( block: &[i32] , key: &[i32], m: i32) -> Vec<i32>{
     let mut cipher_text: Vec<i32> = Vec::new();
@@ -46,20 +53,16 @@ fn hill_cipher( block: &[i32] , key: &[i32], m: i32) -> Vec<i32>{
         let mut sum = 0;
 
         for j in 0..block.len() {
-            //debug("Block Element", &block[j].to_string());
-            //debug("Key Element", &key[j * block.len() + i].to_string());
             sum += block[j] * key[j * block.len() + i];
         }
-        //debug("Sum", &sum.to_string());
         sum = module(sum, m);
-        //debug("Sum", &sum.to_string());
         cipher_text.push(sum);
     }
 
     return cipher_text;
 }
 
-fn modus_ecb_hc(
+pub fn modus_ecb_hc(
     msg : &[i32], 
     block_size : usize, 
     key : &[i32], 
@@ -111,7 +114,7 @@ fn modus_ecb_hc(
 }
 
 
-fn modus_cbc_hc( 
+pub fn modus_cbc_hc( 
     msg : &[i32], 
     block_size : usize, 
     c_0 :&[i32], 
@@ -153,6 +156,109 @@ fn modus_cbc_hc(
         let _xor_result = block_xor(&block, &tmp_block);
         let _cipher_block = hill_cipher(&_xor_result, &key, m);
         tmp_block = _cipher_block.to_vec().clone();
+
+        cipher_text.extend(_cipher_block);
+    }
+
+    
+    cipher_text.drain(( cipher_text.len() - padding )..cipher_text.len());
+
+    return cipher_text;
+}
+
+pub fn modus_cfb_hc(
+    msg : &[i32], 
+    block_size : usize, 
+    c_0 :&[i32], 
+    key : &[i32], 
+    m : i32 
+) -> Vec<i32> {
+    let mut cipher_text: Vec<i32> = Vec::new();
+
+    if key.len() != (block_size * block_size) {
+        error("The key does not correspond with the block size for hill cipher");
+        cipher_text.push(1);
+        return cipher_text;
+    }
+
+    if c_0.len() != block_size {
+        error("The initial block is not the size of a normal block");
+        cipher_text.push(1);
+        return cipher_text;
+    } 
+
+    let mut _tmp_msg: Vec<i32> = Vec::new();
+    let padding = block_size - (msg.len() % block_size);
+
+    _tmp_msg = msg.to_vec().clone();
+
+    if msg.len() % block_size != 0 {
+        for _ in 0..padding {
+            _tmp_msg.push(1);
+        }
+    }
+
+    let msg_blocks = _tmp_msg.chunks(block_size);
+    let mut tmp_block : Vec<i32> = c_0.to_vec().clone();
+
+    for i in msg_blocks {
+        let block = i.to_vec();
+
+        let _cipher_block = hill_cipher(&tmp_block, &key, m);
+        let _xor_result = block_xor(&block, &_cipher_block);
+        tmp_block = _xor_result.to_vec().clone();
+
+        cipher_text.extend(_xor_result);
+    }
+
+    
+    cipher_text.drain(( cipher_text.len() - padding )..cipher_text.len());
+
+    return cipher_text;
+}
+
+pub fn modus_ofb_hc(
+    msg : &[i32], 
+    block_size : usize, 
+    c_0 :&[i32], 
+    key : &[i32], 
+    m : i32 
+) -> Vec<i32> {
+    let mut cipher_text: Vec<i32> = Vec::new();
+
+    if key.len() != (block_size * block_size) {
+        error("The key does not correspond with the block size for hill cipher");
+        cipher_text.push(1);
+        return cipher_text;
+    }
+
+    if c_0.len() != block_size {
+        error("The initial block is not the size of a normal block");
+        cipher_text.push(1);
+        return cipher_text;
+    } 
+
+    let mut _tmp_msg: Vec<i32> = Vec::new();
+    let padding = block_size - (msg.len() % block_size);
+
+    _tmp_msg = msg.to_vec().clone();
+
+    if msg.len() % block_size != 0 {
+        for _ in 0..padding {
+            _tmp_msg.push(1);
+        }
+    }
+
+    let msg_blocks = _tmp_msg.chunks(block_size);
+    let mut tmp_block : Vec<i32> = c_0.to_vec().clone();
+
+    for i in msg_blocks {
+        let block = i.to_vec();
+
+        let _c_0_ek = hill_cipher(&tmp_block, &key, m);
+        let _cipher_block = block_xor(&_c_0_ek, &block);
+        
+        tmp_block = _c_0_ek.to_vec().clone();
 
         cipher_text.extend(_cipher_block);
     }
