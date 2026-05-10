@@ -5,6 +5,7 @@ use std::iter::*;
 
 // Crates externas
 use colored::Colorize;
+use matrix_operations::matrix_inverse_module;
 
 /*  
     --------------------------------------------------------------------------------
@@ -58,7 +59,7 @@ fn hill_cipher(
     // Variable de retorno
     let mut cipher_text: Vec<i32> = Vec::new();
 
-    // Correción de errores
+    // # Correción de errores HC(1):
     // La clave tiene que ser al menos del tamaño del blocke al cuadrado, sino el cifrado es imposible de realizar
     if key.len() != (block.len() * block.len()) {
         cipher_text.push(1);
@@ -83,13 +84,16 @@ fn hill_cipher(
 
 
 // -> Modo de operación Electronic Code Book (ECB) con Hill  cipher: Se aplica el cifrado directamente en cada bloque
+// C = Ek(p)
 pub fn modus_ecb_hc(
-    msg : &[i32], 
-    block_size : usize, 
-    key : &[i32], 
-    m : i32 
+    msg : &[i32],       // Mensaje a encriptar
+    block_size : usize, // Tamaño de bloque a encriptar
+    key : &[i32],       // Llave
+    m : i32             // Modulo
 ) -> Vec<i32> {
-    // Correción de errores ECB(1):
+    let mut cipher_text: Vec<i32> = Vec::new();                            // Variable de retorno
+
+    // # Correción de errores ECB(1):
     // Si la llave no corresponde con el tamaño correcto para el cifrado hill retorna.
     if key.len() != (block_size * block_size) {
         error("The key does not correspond with the block size for hill cipher");
@@ -97,13 +101,12 @@ pub fn modus_ecb_hc(
         return cipher_text;
     }
 
-    let mut cipher_text: Vec<i32> = Vec::new();                            // Variable de retorno
     let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
     let padding = (block_size - (msg.len() % block_size)) % block_size;    // Variable para determinar si el ultimo bloque tiene suficiente tamaño
 
     _tmp_msg = msg.to_vec().clone();        // Se clona el mensaje original
 
-    // Correción de errores ECB(2):
+    // # Correción de errores ECB(2):
     // En caso de que el bloque final no tenga suficiente tamaño, se le añaden 1's para rellenarlo
     _tmp_msg.extend(repeat(1).take(padding));
 
@@ -113,7 +116,7 @@ pub fn modus_ecb_hc(
     // Mapa para guardar datos calculados y ahorrar operaciónes
     let mut cipher_map : HashMap< Vec<i32>, Vec<i32> > = HashMap::new(); 
     
-    // -> Electronic CodeBook main loop, da una pasada por todos los bloques del cifrado
+    // Ciclo : Electronic CodeBook main loop, da una pasada por todos los bloques del cifrado
     for i in msg_blocks {
         let block = i.to_vec();                         // i es un apuntador entonces se tiene que pasar a vector
         let cipher_block : Vec<i32>;                    // Se crea un cipher block temporal
@@ -135,58 +138,68 @@ pub fn modus_ecb_hc(
 }
 
 
+// -> Modo de operación Cipher Block Chaining (CBC) :
+// Cn = Ek(p xor Cn-1)
 pub fn modus_cbc_hc( 
-    msg : &[i32], 
-    block_size : usize, 
-    c_0 :&[i32], 
-    key : &[i32], 
-    m : i32 
+    msg : &[i32],           // Mensaje a encriptar
+    block_size : usize,     // Tamaño del bloque
+    c_0 :&[i32],            // Bloque de cifrado original
+    key : &[i32],           // Llave
+    m : i32                 // Modulo
 ) -> Vec<i32> {
 
-    let mut cipher_text: Vec<i32> = Vec::new();
+    let mut cipher_text: Vec<i32> = Vec::new();     // Varaible de retorno
 
+    // Correción de errores CBC (1):
+    // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
     if key.len() != (block_size * block_size) {
         error("The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
         return cipher_text;
     }
 
+    // Correción de errores CBC (2):
+    // Si el bloque de cifrado inicial no corresponde con el tamaño correcto retorna 1.
     if c_0.len() != block_size {
         error("The initial block is not the size of a normal block");
         cipher_text.push(1);
         return cipher_text;
     } 
 
-    let mut _tmp_msg: Vec<i32> = Vec::new();
-    let padding = block_size - (msg.len() % block_size);
+    let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
+    let padding = (block_size - (msg.len() % block_size)) % block_size;    // Variable para determinar si el ultimo bloque tiene suficiente tamaño
 
-    _tmp_msg = msg.to_vec().clone();
+    _tmp_msg = msg.to_vec().clone();        // Se clona el mensaje original
 
-    if msg.len() % block_size != 0 {
-        for _ in 0..padding {
-            _tmp_msg.push(1);
-        }
-    }
+    // # Correción de errores CBC (2):
+    // En caso de que el bloque final no tenga suficiente tamaño, se le añaden 1's para rellenarlo
+    _tmp_msg.extend(repeat(1).take(padding));
 
+    // Se rompe el mensaje en un arreglo de arreglos del tamaño del bloque
     let msg_blocks = _tmp_msg.chunks(block_size);
-    let mut tmp_block : Vec<i32> = c_0.to_vec().clone();
 
+    let mut tmp_block : Vec<i32> = c_0.to_vec(); // Se inicializa el valor del bloque temporal con el del bloque inicial
+
+    // # Ciclo : Main Loop de Cipher Block Chaining 
     for i in msg_blocks {
-        let block = i.to_vec();
+        let block = i.to_vec();                                 // i es un apuntador entonce se convierte a un vector
 
-        let _xor_result = block_xor(&block, &tmp_block);
-        let _cipher_block = hill_cipher(&_xor_result, &key, m);
-        tmp_block = _cipher_block.to_vec().clone();
+        let _xor_result = block_xor(&block, &tmp_block);        // Se aplica una xor con el bloque anterior 
+        let _cipher_block = hill_cipher(&_xor_result, &key, m); // Se aplica el cifrado al bloque
+        tmp_block = _cipher_block.clone();                      // se pasa el nuevo bloque al bloque actual
 
-        cipher_text.extend(_cipher_block);
+        cipher_text.extend(_cipher_block);                      // Se guarda el bloque cifrado en el texto final
     }
 
     
-    cipher_text.drain(( cipher_text.len() - padding )..cipher_text.len());
+    let _cipher_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
+    cipher_text.drain(( _cipher_size - padding ).._cipher_size);    // Se le recortan los datos de holgura
 
     return cipher_text;
 }
 
+
+// -> Modo de operación Cipher Feedback (CFB) : 
 pub fn modus_cfb_hc(
     msg : &[i32], 
     block_size : usize, 
@@ -238,6 +251,8 @@ pub fn modus_cfb_hc(
     return cipher_text;
 }
 
+
+// -> Modo de operación Cipher Feedback (OFB) :
 pub fn modus_ofb_hc(
     msg : &[i32], 
     block_size : usize, 
@@ -290,14 +305,24 @@ pub fn modus_ofb_hc(
     return cipher_text;
 }
 
+pub fn modus_pcbc_hc() {
+
+}
+
+pub fn modus_ctr_hc() {
+
+}
+
 /*  
     --------------------------------------------------------------------------------
     Tool functions : Funciones que sirven principalmente como herramientas para el resto del desarrollo.
     --------------------------------------------------------------------------------
 */  
 
+// -> Función Modulo, pero siempre positivo
+#[inline(always)]   // Hace que en donde este en el codigo el compilador sustituya esa parte de codigo por directamente la función
 fn module( a: i32 , m : i32 ) -> i32 {
-    return ( ( a % m ) + m ) % m ;
+    return ( ( a % m ) + m ) % m ;  // Al sumar un modulo y aplicarlo nuevamente y darle modulo hace que sean siempre positivos.
 }
 
 fn block_xor( block_1 : &[i32], block_2 : &[i32]) -> Vec<i32> {
@@ -312,16 +337,6 @@ fn block_xor( block_1 : &[i32], block_2 : &[i32]) -> Vec<i32> {
 fn error( message : &str ) {
     println!("{} {}", "Error:".red().bold(), message.red());
 } 
-
-/*
-// -> Función para imprimir una salida formateada para debug
-fn debug(label : &str,  message : &str ) {
-    print!("{}", "Debug [".yellow().bold());
-    print!("{}", label.yellow().italic());
-    print!("{} ", "]: ".yellow().bold());
-    println!("{}", message.yellow());
-}
-*/
 
 
 fn debug_block(label : &str, block : &[i32]) {
