@@ -1,8 +1,9 @@
-
-use std::collections::Hashmap;
+// Librerias estandar
+use std::collections::HashMap;
 use std::time::Instant;
+use std::iter::*;
 
-
+// Crates externas
 use colored::Colorize;
 
 /*  
@@ -21,8 +22,11 @@ fn main() {
     let cipher_text = hill_cipher(&block, &key, m);
     debug_block("cipher Text", &cipher_text);
 
+    let inicio = Instant::now();
     let cipher_text_ecb = modus_ecb_hc(&mesage, 3, &key, m);
+    let duracion = inicio.elapsed();
     debug_block("cipher Text ECB", &cipher_text_ecb);
+    println!("Tiempo transcurrido: {:?}", duracion);
     
     let cipher_text_cbc = modus_cbc_hc(&mesage, 3, &init, &key, m);
     debug_block("cipher Text CBC", &cipher_text_cbc);
@@ -85,8 +89,6 @@ pub fn modus_ecb_hc(
     key : &[i32], 
     m : i32 
 ) -> Vec<i32> {
-    let mut cipher_text: Vec<i32> = Vec::new();             // Variable de retorno
-
     // Correción de errores ECB(1):
     // Si la llave no corresponde con el tamaño correcto para el cifrado hill retorna.
     if key.len() != (block_size * block_size) {
@@ -95,34 +97,40 @@ pub fn modus_ecb_hc(
         return cipher_text;
     }
 
-    let mut _tmp_msg: Vec<i32> = Vec::new();                // Variable para copiar y reajustar el mensaje a cifrar
-    let padding = block_size - (msg.len() % block_size);    // Variable para determinar si el ultimo bloque tiene suficiente tamaño
+    let mut cipher_text: Vec<i32> = Vec::new();                            // Variable de retorno
+    let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
+    let padding = (block_size - (msg.len() % block_size)) % block_size;    // Variable para determinar si el ultimo bloque tiene suficiente tamaño
 
     _tmp_msg = msg.to_vec().clone();        // Se clona el mensaje original
 
     // Correción de errores ECB(2):
-    // En caso de que el bloque final no tenga suficiente tamaño 
-    if padding != 0 {
-        for _ in 0..padding {
-            _tmp_msg.push(1);       
-        }
-    }
+    // En caso de que el bloque final no tenga suficiente tamaño, se le añaden 1's para rellenarlo
+    _tmp_msg.extend(repeat(1).take(padding));
 
+    // Se rompe el mensaje en un arreglo de arreglos del tamaño del bloque
     let msg_blocks = _tmp_msg.chunks(block_size);
 
-    for i in msg_blocks { 
-        let block = i.to_vec();
-        let cipher_block = hill_cipher(&block, key, m);
-        cipher_text.extend(cipher_block);
+    // Mapa para guardar datos calculados y ahorrar operaciónes
+    let mut cipher_map : HashMap< Vec<i32>, Vec<i32> > = HashMap::new(); 
+    
+    // -> Electronic CodeBook main loop, da una pasada por todos los bloques del cifrado
+    for i in msg_blocks {
+        let block = i.to_vec();                         // i es un apuntador entonces se tiene que pasar a vector
+        let cipher_block : Vec<i32>;                    // Se crea un cipher block temporal
+
+        match cipher_map.get(&block) {                  // Se busca en el hash map si ya se ha calculado el valor y si:
+            Some(p) => cipher_block = p.to_vec(),       // Si existe se pasa directo como cipher_block
+            None => {                                   // Si no existe, se calcula y añade a la tabla hash
+                cipher_block = hill_cipher(&block, key, m);
+                cipher_map.entry(block).or_insert(cipher_block.clone());
+            }
+        }
+        cipher_text.extend(cipher_block);   // Se agrega el bloque cifrado al final del texto cifado
     }
 
+    let _cipher_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
+    cipher_text.drain(( _cipher_size - padding ).._cipher_size);    // Se le recortan los datos de holgura
 
-    //debug("ECB", "cipher text with padding complete");
-    cipher_text.drain(( cipher_text.len() - padding )..cipher_text.len() );
-
-
-    debug("ECB", "cipher text complete");
-    debug_block("ECB", &cipher_text);
     return cipher_text;
 }
 
@@ -293,18 +301,10 @@ fn module( a: i32 , m : i32 ) -> i32 {
 }
 
 fn block_xor( block_1 : &[i32], block_2 : &[i32]) -> Vec<i32> {
-    let mut result : Vec<i32> = Vec::new();
-
-    if block_1.len() != block_2.len() {
-        error("The two blocks need to be the same size");
-        result.push(1);
-        return result;
-    }
-
-    for i in 0..block_1.len() {
-        result.push(block_1[i] ^ block_2[i]);
-    }
-
+    let  result : Vec<i32> = block_1.to_vec().iter()
+        .zip(block_2.to_vec().iter())
+        .map(|(x , y)| x ^ y)
+        .collect();
     return result;
 }
 
@@ -313,7 +313,7 @@ fn error( message : &str ) {
     println!("{} {}", "Error:".red().bold(), message.red());
 } 
 
-
+/*
 // -> Función para imprimir una salida formateada para debug
 fn debug(label : &str,  message : &str ) {
     print!("{}", "Debug [".yellow().bold());
@@ -321,6 +321,8 @@ fn debug(label : &str,  message : &str ) {
     print!("{} ", "]: ".yellow().bold());
     println!("{}", message.yellow());
 }
+*/
+
 
 fn debug_block(label : &str, block : &[i32]) {
     print!("{}", "Debug [".yellow().bold());
