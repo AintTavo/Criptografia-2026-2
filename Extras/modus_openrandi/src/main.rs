@@ -25,24 +25,24 @@ fn main() {
     debug_block("cipher Text", &cipher_text);
 
     let inicio = Instant::now();
-    let cipher_text_ecb = modus_ecb_hc(&mesage, 3, &key, m);
+    let cipher_text_ecb = modus_ecb_hc_cipher(&mesage, 3, &key, m);
     let duracion = inicio.elapsed();
     debug_block("cipher Text ECB", &cipher_text_ecb);
     println!("Tiempo transcurrido: {:?}", duracion);
     
-    let cipher_text_cbc = modus_cbc_hc(&mesage, 3, &init, &key, m);
+    let cipher_text_cbc = modus_cbc_hc_cipher(&mesage, 3, &init, &key, m);
     debug_block("cipher Text CBC", &cipher_text_cbc);
 
-    let cipher_text_cfb = modus_cfb_hc(&mesage, 3, &init, &key, m);
+    let cipher_text_cfb = modus_cfb_hc_cipher(&mesage, 3, &init, &key, m);
     debug_block("cipher Text CFB", &cipher_text_cfb);
 
-    let cipher_text_ofb = modus_ofb_hc(&mesage, 3, &init, &key, m);
+    let cipher_text_ofb = modus_ofb_hc_cipher(&mesage, 3, &init, &key, m);
     debug_block("cipher Text OFB", &cipher_text_ofb);
 
-    let cipher_text_cbc = modus_pcbc_hc(&mesage, 3, &init, &key, m);
+    let cipher_text_cbc = modus_pcbc_hc_cipher(&mesage, 3, &init, &key, m);
     debug_block("cipher Text PCBC", &cipher_text_cbc);
 
-    let (nonce, cipher_text_ctr) = modus_ctr_hc(&mesage, 3, &key, m);
+    let (nonce, cipher_text_ctr) = modus_ctr_hc_cipher(&mesage, 3, &key, m);
     debug_block("cipher Text CTR", &cipher_text_ctr);
     debug_block("Nonce CTR", &nonce);
 
@@ -57,7 +57,9 @@ fn main() {
     --------------------------------------------------------------------------------
 */  
 
-// Sub domain : 
+// ##########################
+// Sub main : Hill 
+// ##########################
 
 // -> Hill Cipher : Aplicacion del cifrador en hill basado en algebra lineal.
 fn hill_cipher( 
@@ -69,7 +71,7 @@ fn hill_cipher(
     // Variable de retorno
     let mut cipher_text : Vec<i32> = Vec::new();
 
-    // # Correción de errores HC(1):
+    // # Correción de errores HC_CIPHER(1):
     // La clave tiene que ser al menos del tamaño del blocke al cuadrado, sino el cifrado es imposible de realizar
     if key.len() != (block.len() * block.len()) {
         cipher_text.push(1);
@@ -93,9 +95,13 @@ fn hill_cipher(
 }
 
 
+// ##########################
+// Sub main : Modus Cipher 
+// ##########################
+
 // -> Modo de operación Electronic Code Book (ECB) con Hill  cipher: Se aplica el cifrado directamente en cada bloque
 // C = Ek(p)
-pub fn modus_ecb_hc(
+pub fn modus_ecb_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
     block_size : usize, // Tamaño de bloque a encriptar
     key : &[i32],       // Llave
@@ -150,7 +156,7 @@ pub fn modus_ecb_hc(
 
 // -> Modo de operación Cipher Block Chaining (CBC) :
 // Cn = Ek(p xor Cn-1)
-pub fn modus_cbc_hc( 
+pub fn modus_cbc_hc_cipher( 
     msg : &[i32],           // Mensaje a encriptar
     block_size : usize,     // Tamaño del bloque
     c_0 :&[i32],            // Bloque de cifrado original
@@ -211,7 +217,7 @@ pub fn modus_cbc_hc(
 
 // -> Modo de operación Cipher Feedback (CFB) : 
 // Cn = Ek(Cn-1) xor p 
-pub fn modus_cfb_hc(
+pub fn modus_cfb_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
     block_size : usize, // Tamaño de bloque
     c_0 :&[i32],        // Vector de inicialización (IV)
@@ -270,7 +276,7 @@ pub fn modus_cfb_hc(
 
 // -> Modo de operación Output Feedback (OFB) :
 // C = Ek(Co) xor p
-pub fn modus_ofb_hc(
+pub fn modus_ofb_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
     block_size : usize, // Tamaño de bloque
     c_0 :&[i32],        // Vector de inicialización (IV)
@@ -328,7 +334,7 @@ pub fn modus_ofb_hc(
 // -> Modo de operación Propagating Cipher Block Chaining (PCBC)
 // n = 0    |   C = Ek ( p xor Co )
 // n = 1    |   C = Ek ( (p n-1 xor C n-1) xor p )
-pub fn modus_pcbc_hc(
+pub fn modus_pcbc_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
     block_size : usize, // Tamaño de bloque
     c_0 :&[i32],        // Vector de inicialización (IV)
@@ -387,7 +393,7 @@ pub fn modus_pcbc_hc(
 
 // -> Modo de operación Counter (CTR)
 // C = Ek(Nonce * Counter) xor p
-pub fn modus_ctr_hc(
+pub fn modus_ctr_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
     block_size : usize, // Tamaño de bloque
     key : &[i32],       // Llave
@@ -452,6 +458,35 @@ pub fn modus_ctr_hc(
     return (nonce, cipher_text);
 }
 
+
+// ##########################
+// Sub main : Modus Decipher 
+// ##########################
+
+pub fn modus_ecb_hc_decipher () {
+
+}
+
+pub fn modus_cbc_hc_decipher () {
+
+}
+
+pub fn modus_cfb_hc_decipher () {
+
+}
+
+pub fn modus_ofb_hc_decipher () {
+
+}
+
+pub fn modus_pcbc_hc_decipher () {
+
+}
+
+pub fn modus_ctr_hc_decipher () {
+    
+}
+
 /* --------------------------------------------------------------------------------
     Tool functions : Funciones que sirven principalmente como herramientas para el resto del desarrollo.
     --------------------------------------------------------------------------------
@@ -463,6 +498,7 @@ fn module( a: i32 , m : i32 ) -> i32 {
     return ( ( a % m ) + m ) % m ;  // Garantiza que el resultado esté en el rango [0, m-1]
 }
 
+
 // -> Función Block XOR : Realiza una operación XOR bit a bit entre dos vectores
 fn block_xor( block_1 : &[i32], block_2 : &[i32]) -> Vec<i32> {
     let  result : Vec<i32> = block_1.to_vec().iter()
@@ -472,10 +508,12 @@ fn block_xor( block_1 : &[i32], block_2 : &[i32]) -> Vec<i32> {
     return result;
 }
 
+
 // -> Función para imprimir una saldia formateada para error
 fn error( message : &str ) {
     println!("{} {}", "Error:".red().bold(), message.red());
 } 
+
 
 // -> Función Debug Block : Imprime en consola un bloque con formato de depuración
 fn debug_block(label : &str, block : &[i32]) {
