@@ -1,6 +1,5 @@
 // Librerias estandar
 use std::collections::HashMap;
-use std::time::Instant;
 use std::iter::*;
 
 // Crates externas
@@ -14,43 +13,31 @@ use rand::random;
     --------------------------------------------------------------------------------
 */  
 fn main() {
-    let block = [10, 50, 9];
-    let block_2 = [14, 100, 197];
     let init = [9, 99, 11];
     let key = [ 1, 2, 3, 4, 5, 6, 11, 9, 8];
     let m = 256;
     let mesage = [10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50];
+    debug_block("Original", &mesage);
 
-    let cipher_text = hill_cipher(&block, &key, m);
-    debug_block("cipher Text", &cipher_text);
 
-    let inicio = Instant::now();
-    let (_,cipher_text_ecb) = modus_ecb_hc_cipher(&mesage, 3, &key, m);
-    let duracion = inicio.elapsed();
-    debug_block("cipher Text ECB", &cipher_text_ecb);
-    println!("Tiempo transcurrido: {:?}", duracion);
     
-    let (_,cipher_text_cbc) = modus_cbc_hc_cipher(&mesage, 3, &init, &key, m);
-    debug_block("cipher Text CBC", &cipher_text_cbc);
+    let _ = modus_cfb_hc_cipher(&mesage, 3, &init, &key, m);
+    let _ = modus_ofb_hc_cipher(&mesage, 3, &init, &key, m);
+    let _ = modus_pcbc_hc_cipher(&mesage, 3, &init, &key, m);
+    let _ = modus_ctr_hc_cipher(&mesage, 3, &key, m);
+    let _ = modus_cbc_hc_cipher(&mesage, 3, &init, &key, m);
 
-    let (_,cipher_text_cfb) = modus_cfb_hc_cipher(&mesage, 3, &init, &key, m);
-    debug_block("cipher Text CFB", &cipher_text_cfb);
+    // Prueba ECB
+    let (_p,cipher_text) = modus_ecb_hc_cipher(&mesage, 3, &key, m);
+    debug_block("ECB_C", &cipher_text);
+    let plain = modus_ecb_hc_decipher(&cipher_text, &key, _p, m);
+    debug_block("ECB_D", &plain);
 
-    let (_,cipher_text_ofb) = modus_ofb_hc_cipher(&mesage, 3, &init, &key, m);
-    debug_block("cipher Text OFB", &cipher_text_ofb);
-
-    let (_,cipher_text_cbc) = modus_pcbc_hc_cipher(&mesage, 3, &init, &key, m);
-    debug_block("cipher Text PCBC", &cipher_text_cbc);
-
-    let (_p,nonce, cipher_text_ctr) = modus_ctr_hc_cipher(&mesage, 3, &key, m);
-    debug_block("cipher Text CTR", &cipher_text_ctr);
-    debug_block("Nonce CTR", &nonce);
-
-    println!("Debug[{}] : {}","Padding".yellow().bold(), _p);
-
-    let tmp_block = block_xor(&block, &block_2);
-    debug_block("Xor", &tmp_block);
-
+    // Prueba CBC
+    let (_p,cipher_text) = modus_cbc_hc_cipher(&mesage, 3, &init, &key, m);
+    debug_block("CBC_C", &cipher_text);
+    let plain = modus_cbc_hc_decipher(&cipher_text, &init, &key, _p, m);
+    debug_block("CBC_D", &plain);
 }
 
 /*  
@@ -405,10 +392,11 @@ pub fn modus_ctr_hc_cipher(
     _tmp_msg.extend(repeat(1).take(padding));
 
     let _tmp_it = (block_size - 1) % block_size;
-    nonce.extend(
+
+    nonce.extend(       // Se agregan numeros aleatorios y se le aplica un modulo, 
         repeat_with(
             || module(random::<i32>(),m)
-        ).take(_tmp_it)
+        ).take(_tmp_it) // Repite la generación de estos hasta 1 menos el tamaño del bloque
     );
     nonce.push(0);
 
@@ -416,26 +404,22 @@ pub fn modus_ctr_hc_cipher(
     let msg_blocks = _tmp_msg.chunks(block_size);
 
 
-    // # Ciclo : Main Loop de Propagating Cipher Block Chaining 
+    // # Ciclo : Main Loop de Counter
     for i in msg_blocks {
-        let block = i.to_vec();
+        let block = i.to_vec();                             // Como i es apuntador se pasa a Vector
 
-        let _ctr_ek = hill_cipher(&nonce, &key, m);
-        let _cipher_block = block_xor(&_ctr_ek, &block);
+        let _ctr_ek = hill_cipher(&nonce, &key, m);         // cifra el contador actual
+        let _cipher_block = block_xor(&_ctr_ek, &block);    // Se aplica xor con plain text
 
-        debug_block("CTR [plain]", &block);
-        debug_block("CTR [nonce]", &nonce);
-        debug_block("CTR [cipher]", &_ctr_ek);
-        debug_block("CTR [Xor]", &_cipher_block);
 
-        if let Some(counter) = nonce.last_mut() {
-            *counter += 1;
+        if let Some(counter) = nonce.last_mut() {           // Se le suma uno al contador
+            *counter += 1;          
         }
 
         cipher_text.extend(_cipher_block);
     }
 
-    nonce.pop();    
+    nonce.pop();    // se elimina el contador, se mandan unicamente los numeros aleatorios
 
     return (padding, nonce, cipher_text);
 }
@@ -445,12 +429,120 @@ pub fn modus_ctr_hc_cipher(
 // Sub main : Modus Decipher 
 // ##########################
 
-pub fn modus_ecb_hc_decipher () {
+// -> Modo de operación Electronic CodeBook decifrado
+// C = Dk(p)
+pub fn modus_ecb_hc_decipher(
+    cipher_text : &[i32],
+    key : &[i32],
+    padding : usize,
+    m : i32
+) -> Vec<i32> {
+    let mut plain_text : Vec<i32> = Vec::new();     // Variable de retorno
+    let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
 
+    // Corección de errores ECB_D(1):
+    // Si la llave no es del tamaño correcto no se decodifica, retorna
+    if block_size != block_size.trunc() {
+        println!("Error: The key size muss be the square of a number");
+        plain_text.push(1);
+        return plain_text;
+    }
+
+    let block_size = block_size as usize;   // Se pasa el resultado a usize
+
+    // Corrección de errores ECB_D(2):
+    // Si el mensaje no se puede dividir perfectamente entre el tamaño del bloque, esto retorna
+    if (cipher_text.len() % block_size) != 0 {
+        println!("Error: The message size does not correspond with the block size");
+        plain_text.push(1);
+        return plain_text;
+    }
+
+    // Preparación del mensaje
+    let _tmp_msg : Vec<i32> = cipher_text.to_vec().clone();                 // Se clona mensaje
+    let msg_blocks = _tmp_msg.chunks(block_size);                           // Se divide en bloques del tamaño exacto
+
+    // Generación de llave inversa para decifrado
+    let inverse_key = matrix_inverse_module(&key, m as u32);                // Inversa de la matriz
+
+    // Creación de diccionario
+    let mut decipher_map : HashMap< Vec<i32>, Vec<i32> > = HashMap::new();  // Mapa hash para facilitar decifrado
+
+    for i in msg_blocks {
+        let block = i.to_vec();                         // i es un apuntador entonces se tiene que pasar a vector
+        let decipher_block : Vec<i32>;                    // Se crea un cipher block temporal
+
+        match decipher_map.get(&block) {                  // Se busca en el hash map si ya se ha calculado el valor y si:
+            Some(p) => decipher_block = p.to_vec(),       // Si existe se pasa directo como cipher_block
+            None => {                                   // Si no existe, se calcula y añade a la tabla hash
+                decipher_block = hill_cipher(&block, &inverse_key, m);
+                decipher_map.entry(block).or_insert(decipher_block.clone());
+            }
+        }
+        plain_text.extend(decipher_block);   // Se agrega el bloque cifrado al final del texto cifa
+    }
+
+
+    let _msg_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
+    plain_text.drain(( _msg_size - padding ).._msg_size);    // Se le recortan los datos de holgura
+
+    return plain_text;
 }
 
-pub fn modus_cbc_hc_decipher () {
+pub fn modus_cbc_hc_decipher(
+    cipher_text : &[i32],
+    c_0 : &[i32],
+    key : &[i32],
+    padding : usize,
+    m : i32
+) -> Vec<i32> {
 
+    let mut plain_text : Vec<i32> = Vec::new();     // Variable de retorno
+    let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
+
+    // Corección de errores ECB_D(1):
+    // Si la llave no es del tamaño correcto no se decodifica, retorna
+    if block_size != block_size.trunc() {
+        println!("Error: The key size muss be the square of a number");
+        plain_text.push(1);
+        return plain_text;
+    }
+
+    let block_size = block_size as usize;   // Se pasa el resultado a usize
+
+    // Corrección de errores ECB_D(2):
+    // Si el mensaje no se puede dividir perfectamente entre el tamaño del bloque, esto retorna
+    if (cipher_text.len() % block_size) != 0 {
+        println!("Error: The message size does not correspond with the block size");
+        plain_text.push(1);
+        return plain_text;
+    }
+
+    // Preparación del mensaje
+    let _tmp_msg : Vec<i32> = cipher_text.to_vec().clone();                 // Se clona mensaje
+    let msg_blocks = _tmp_msg.chunks(block_size);                           // Se divide en bloques del tamaño exacto
+
+    // Generación de llave inversa para decifrado
+    let inverse_key = matrix_inverse_module(&key, m as u32);                // Inversa de la matriz
+
+    let mut tmp_block = c_0.to_vec();   // C inicial es un apuntador entonces se necesita clonar
+
+    for i in msg_blocks {
+        let block = i.to_vec();                         // i es un apuntador entonces se tiene que pasar a vector
+        
+        let dk_block = hill_cipher(&block, &inverse_key, m);    // Decifrado del bloque
+
+        let decipher_block = block_xor(&dk_block, &tmp_block);     // Xor del decifrado y el anterior cifrado
+
+        tmp_block = block;                  // Se cuarda el ultimo bloque
+        plain_text.extend(decipher_block);   // Se agrega el bloque cifrado al final del texto cifa
+    }
+
+
+    let _msg_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
+    plain_text.drain(( _msg_size - padding ).._msg_size);    // Se le recortan los datos de holgura
+
+    return plain_text;
 }
 
 pub fn modus_cfb_hc_decipher () {
