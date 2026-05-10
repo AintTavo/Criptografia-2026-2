@@ -126,8 +126,6 @@ pub fn matrix_adjugate(matrix : &[i32] ) -> Vec<i32> {
     }
     let size = (size as f64).sqrt() as i32;
 
-    debug("2x2", "llegada a matriz 2 x 2");
-
     let base : i32 = -1;
     for i in 0..size {
         for j in 0..size {
