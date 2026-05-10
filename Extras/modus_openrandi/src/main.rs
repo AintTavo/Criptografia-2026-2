@@ -6,6 +6,7 @@ use std::iter::*;
 // Crates externas
 use colored::Colorize;
 use matrix_operations::matrix_inverse_module;
+use rand::random;
 
 /*  
     --------------------------------------------------------------------------------
@@ -41,6 +42,10 @@ fn main() {
     let cipher_text_cbc = modus_pcbc_hc(&mesage, 3, &init, &key, m);
     debug_block("cipher Text PCBC", &cipher_text_cbc);
 
+    let (nonce, cipher_text_ctr) = modus_ctr_hc(&mesage, 3, &key, m);
+    debug_block("cipher Text CTR", &cipher_text_ctr);
+    debug_block("Nonce CTR", &nonce);
+
     let tmp_block = block_xor(&block, &block_2);
     debug_block("Xor", &tmp_block);
 
@@ -52,6 +57,8 @@ fn main() {
     --------------------------------------------------------------------------------
 */  
 
+// Sub domain : 
+
 // -> Hill Cipher : Aplicacion del cifrador en hill basado en algebra lineal.
 fn hill_cipher( 
     block: &[i32], 
@@ -60,7 +67,7 @@ fn hill_cipher(
 ) -> Vec<i32> {
 
     // Variable de retorno
-    let mut cipher_text: Vec<i32> = Vec::new();
+    let mut cipher_text : Vec<i32> = Vec::new();
 
     // # Correción de errores HC(1):
     // La clave tiene que ser al menos del tamaño del blocke al cuadrado, sino el cifrado es imposible de realizar
@@ -94,7 +101,7 @@ pub fn modus_ecb_hc(
     key : &[i32],       // Llave
     m : i32             // Modulo
 ) -> Vec<i32> {
-    let mut cipher_text: Vec<i32> = Vec::new();                            // Variable de retorno
+    let mut cipher_text : Vec<i32> = Vec::new();                            // Variable de retorno
 
     // # Correción de errores ECB(1):
     // Si la llave no corresponde con el tamaño correcto para el cifrado hill retorna.
@@ -151,7 +158,7 @@ pub fn modus_cbc_hc(
     m : i32                 // Modulo
 ) -> Vec<i32> {
 
-    let mut cipher_text: Vec<i32> = Vec::new();     // Varaible de retorno
+    let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
 
     // Correción de errores CBC (1):
     // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
@@ -211,7 +218,7 @@ pub fn modus_cfb_hc(
     key : &[i32],       // Llave
     m : i32             // Modulo
 ) -> Vec<i32> {
-    let mut cipher_text: Vec<i32> = Vec::new(); // Variable de retorno
+    let mut cipher_text : Vec<i32> = Vec::new(); // Variable de retorno
 
     // # Corrección de errores CFB(1):
     // Verificación de integridad de la llave para el cifrado Hill
@@ -270,7 +277,7 @@ pub fn modus_ofb_hc(
     key : &[i32],       // Llave
     m : i32             // Modulo
 ) -> Vec<i32> {
-    let mut cipher_text: Vec<i32> = Vec::new(); // Variable de retorno
+    let mut cipher_text : Vec<i32> = Vec::new(); // Variable de retorno
 
     // # Corrección de errores OFB(1):
     // Verificación de tamaño de llave
@@ -328,7 +335,7 @@ pub fn modus_pcbc_hc(
     key : &[i32],       // Llave
     m : i32             // Módulo
 ) -> Vec<i32> {
-    let mut cipher_text: Vec<i32> = Vec::new();     // Varaible de retorno
+    let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
 
     // Correción de errores CBC (1):
     // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
@@ -378,9 +385,71 @@ pub fn modus_pcbc_hc(
     return cipher_text;
 }
 
+// -> Modo de operación Counter (CTR)
+// C = Ek(Nonce * Counter) xor p
+pub fn modus_ctr_hc(
+    msg : &[i32],       // Mensaje a encriptar
+    block_size : usize, // Tamaño de bloque
+    key : &[i32],       // Llave
+    m : i32             // Modulo
+) -> ( Vec<i32>, Vec<i32> ) {
+    let mut nonce : Vec<i32> = Vec::new();          // Variable de nonce
+    let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
 
-pub fn modus_ctr_hc() {
-    // Pendiente de implementación
+    // Correción de errores CTR (1):
+    // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
+    if key.len() != (block_size * block_size) {
+        error("The key does not correspond with the block size for hill cipher");
+        cipher_text.push(1);
+        nonce.push(1);
+        return (nonce, cipher_text);
+    }
+
+    let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
+    let padding = (block_size - (msg.len() % block_size)) % block_size;    // Variable para determinar si el ultimo bloque tiene suficiente tamaño
+
+    _tmp_msg = msg.to_vec().clone();        // Se clona el mensaje original
+
+    // # Correción de errores CTR (2):
+    // En caso de que el bloque final no tenga suficiente tamaño, se le añaden 1's para rellenarlo
+    _tmp_msg.extend(repeat(1).take(padding));
+
+    let _tmp_it = (block_size - 1) % block_size;
+    nonce.extend(
+        repeat_with(
+            || module(random::<i32>(),m)
+        ).take(_tmp_it)
+    );
+    nonce.push(0);
+
+    // Se rompe el mensaje en un arreglo de arreglos del tamaño del bloque
+    let msg_blocks = _tmp_msg.chunks(block_size);
+
+
+    // # Ciclo : Main Loop de Propagating Cipher Block Chaining 
+    for i in msg_blocks {
+        let block = i.to_vec();
+
+        let _ctr_ek = hill_cipher(&nonce, &key, m);
+        let _cipher_block = block_xor(&_ctr_ek, &block);
+
+        debug_block("CTR [plain]", &block);
+        debug_block("CTR [nonce]", &nonce);
+        debug_block("CTR [cipher]", &_ctr_ek);
+        debug_block("CTR [Xor]", &_cipher_block);
+
+        if let Some(counter) = nonce.last_mut() {
+            *counter += 1;
+        }
+
+        cipher_text.extend(_cipher_block);
+    }
+
+    nonce.pop();    
+    let _cipher_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
+    cipher_text.drain(( _cipher_size - padding ).._cipher_size);    // Se le recortan los datos de holgura
+
+    return (nonce, cipher_text);
 }
 
 /* --------------------------------------------------------------------------------
