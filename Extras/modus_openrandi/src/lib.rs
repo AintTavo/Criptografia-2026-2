@@ -20,7 +20,7 @@ pub fn modus_ecb_hc(
     key : &[i32],       // Llave
     m : i32             // Modulo
 ) -> Vec<i32> {
-    let mut cipher_text: Vec<i32> = Vec::new();                            // Variable de retorno
+    let mut cipher_text: Vec<i32> = Vec::new();     // Variable de retorno
 
     // Correción de errores ECB(1):
     // Si la llave no corresponde con el tamaño correcto para el cifrado hill retorna.
@@ -82,7 +82,7 @@ pub fn modus_cbc_hc(
     // Correción de errores CBC (1):
     // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
     if key.len() != (block_size * block_size) {
-        error("The key does not correspond with the block size for hill cipher");
+        println!(" error : The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
         return cipher_text;
     }
@@ -90,7 +90,7 @@ pub fn modus_cbc_hc(
     // Correción de errores CBC (2):
     // Si el bloque de cifrado inicial no corresponde con el tamaño correcto retorna 1.
     if c_0.len() != block_size {
-        error("The initial block is not the size of a normal block");
+        println!(" error : The initial block is not the size of a normal block");
         cipher_text.push(1);
         return cipher_text;
     } 
@@ -143,7 +143,7 @@ pub fn modus_cfb_hc(
     // # Corrección de errores CFB(1):
     // Verificación de integridad de la llave para el cifrado Hill
     if key.len() != (block_size * block_size) {
-        error("The key does not correspond with the block size for hill cipher");
+        println!(" error : The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
         return cipher_text;
     }
@@ -151,7 +151,7 @@ pub fn modus_cfb_hc(
     // # Corrección de errores CFB(2):
     // Verificación de que el IV tenga el tamaño de bloque correspondiente
     if c_0.len() != block_size {
-        error("The initial block is not the size of a normal block");
+        println!(" error : The initial block is not the size of a normal block");
         cipher_text.push(1);
         return cipher_text;
     } 
@@ -203,7 +203,7 @@ pub fn modus_ofb_hc(
     // # Corrección de errores OFB(1):
     // Verificación de tamaño de llave
     if key.len() != (block_size * block_size) {
-        error("The key does not correspond with the block size for hill cipher");
+        println!(" error : The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
         return cipher_text;
     }
@@ -211,7 +211,7 @@ pub fn modus_ofb_hc(
     // # Corrección de errores OFB(2):
     // Verificación de tamaño del bloque inicial
     if c_0.len() != block_size {
-        error("The initial block is not the size of a normal block");
+        println!(" error : The initial block is not the size of a normal block");
         cipher_text.push(1);
         return cipher_text;
     } 
@@ -262,7 +262,7 @@ pub fn modus_pcbc_hc(
     // Correción de errores CBC (1):
     // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
     if key.len() != (block_size * block_size) {
-        error("The key does not correspond with the block size for hill cipher");
+        println!(" error : The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
         return cipher_text;
     }
@@ -270,7 +270,7 @@ pub fn modus_pcbc_hc(
     // Correción de errores CBC (2):
     // Si el bloque de cifrado inicial no corresponde con el tamaño correcto retorna 1.
     if c_0.len() != block_size {
-        error("The initial block is not the size of a normal block");
+        println!(" error : The initial block is not the size of a normal block");
         cipher_text.push(1);
         return cipher_text;
     } 
@@ -348,4 +348,13 @@ fn hill_cipher(
 #[inline(always)]
 fn module( a: i32 , m : i32 ) -> i32 {
     return ( ( a % m ) + m ) % m ;
+}
+
+// -> Función Block XOR : Realiza una operación XOR bit a bit entre dos vectores
+fn block_xor( block_1 : &[i32], block_2 : &[i32]) -> Vec<i32> {
+    let  result : Vec<i32> = block_1.to_vec().iter()
+        .zip(block_2.to_vec().iter())
+        .map(|(x , y)| x ^ y)
+        .collect();
+    return result;
 }
