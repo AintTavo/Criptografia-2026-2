@@ -19,32 +19,34 @@ fn main() {
     let init = [9, 99, 11];
     let key = [ 1, 2, 3, 4, 5, 6, 11, 9, 8];
     let m = 256;
-    let mesage = [10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9];
+    let mesage = [10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50];
 
     let cipher_text = hill_cipher(&block, &key, m);
     debug_block("cipher Text", &cipher_text);
 
     let inicio = Instant::now();
-    let cipher_text_ecb = modus_ecb_hc_cipher(&mesage, 3, &key, m);
+    let (_,cipher_text_ecb) = modus_ecb_hc_cipher(&mesage, 3, &key, m);
     let duracion = inicio.elapsed();
     debug_block("cipher Text ECB", &cipher_text_ecb);
     println!("Tiempo transcurrido: {:?}", duracion);
     
-    let cipher_text_cbc = modus_cbc_hc_cipher(&mesage, 3, &init, &key, m);
+    let (_,cipher_text_cbc) = modus_cbc_hc_cipher(&mesage, 3, &init, &key, m);
     debug_block("cipher Text CBC", &cipher_text_cbc);
 
-    let cipher_text_cfb = modus_cfb_hc_cipher(&mesage, 3, &init, &key, m);
+    let (_,cipher_text_cfb) = modus_cfb_hc_cipher(&mesage, 3, &init, &key, m);
     debug_block("cipher Text CFB", &cipher_text_cfb);
 
-    let cipher_text_ofb = modus_ofb_hc_cipher(&mesage, 3, &init, &key, m);
+    let (_,cipher_text_ofb) = modus_ofb_hc_cipher(&mesage, 3, &init, &key, m);
     debug_block("cipher Text OFB", &cipher_text_ofb);
 
-    let cipher_text_cbc = modus_pcbc_hc_cipher(&mesage, 3, &init, &key, m);
+    let (_,cipher_text_cbc) = modus_pcbc_hc_cipher(&mesage, 3, &init, &key, m);
     debug_block("cipher Text PCBC", &cipher_text_cbc);
 
-    let (nonce, cipher_text_ctr) = modus_ctr_hc_cipher(&mesage, 3, &key, m);
+    let (_p,nonce, cipher_text_ctr) = modus_ctr_hc_cipher(&mesage, 3, &key, m);
     debug_block("cipher Text CTR", &cipher_text_ctr);
     debug_block("Nonce CTR", &nonce);
+
+    println!("Debug[{}] : {}","Padding".yellow().bold(), _p);
 
     let tmp_block = block_xor(&block, &block_2);
     debug_block("Xor", &tmp_block);
@@ -106,7 +108,7 @@ pub fn modus_ecb_hc_cipher(
     block_size : usize, // Tamaño de bloque a encriptar
     key : &[i32],       // Llave
     m : i32             // Modulo
-) -> Vec<i32> {
+) -> (usize, Vec<i32>) {
     let mut cipher_text : Vec<i32> = Vec::new();                            // Variable de retorno
 
     // # Correción de errores ECB(1):
@@ -114,7 +116,7 @@ pub fn modus_ecb_hc_cipher(
     if key.len() != (block_size * block_size) {
         error("The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
-        return cipher_text;
+        return (0,cipher_text);
     }
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
@@ -147,10 +149,7 @@ pub fn modus_ecb_hc_cipher(
         cipher_text.extend(cipher_block);   // Se agrega el bloque cifrado al final del texto cifado
     }
 
-    let _cipher_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
-    cipher_text.drain(( _cipher_size - padding ).._cipher_size);    // Se le recortan los datos de holgura
-
-    return cipher_text;
+    return (padding, cipher_text);
 }
 
 
@@ -162,7 +161,7 @@ pub fn modus_cbc_hc_cipher(
     c_0 :&[i32],            // Bloque de cifrado original
     key : &[i32],           // Llave
     m : i32                 // Modulo
-) -> Vec<i32> {
+) -> (usize, Vec<i32>)  {
 
     let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
 
@@ -171,7 +170,7 @@ pub fn modus_cbc_hc_cipher(
     if key.len() != (block_size * block_size) {
         error("The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
-        return cipher_text;
+        return (0,cipher_text);
     }
 
     // Correción de errores CBC (2):
@@ -179,7 +178,7 @@ pub fn modus_cbc_hc_cipher(
     if c_0.len() != block_size {
         error("The initial block is not the size of a normal block");
         cipher_text.push(1);
-        return cipher_text;
+        return (0,cipher_text);
     } 
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
@@ -207,11 +206,7 @@ pub fn modus_cbc_hc_cipher(
         cipher_text.extend(_cipher_block);                      // Se guarda el bloque cifrado en el texto final
     }
 
-    
-    let _cipher_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
-    cipher_text.drain(( _cipher_size - padding ).._cipher_size);    // Se le recortan los datos de holgura
-
-    return cipher_text;
+    return (padding, cipher_text);
 }
 
 
@@ -223,7 +218,7 @@ pub fn modus_cfb_hc_cipher(
     c_0 :&[i32],        // Vector de inicialización (IV)
     key : &[i32],       // Llave
     m : i32             // Modulo
-) -> Vec<i32> {
+) -> (usize, Vec<i32>) {
     let mut cipher_text : Vec<i32> = Vec::new(); // Variable de retorno
 
     // # Corrección de errores CFB(1):
@@ -231,7 +226,7 @@ pub fn modus_cfb_hc_cipher(
     if key.len() != (block_size * block_size) {
         error("The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
-        return cipher_text;
+        return (0,cipher_text);
     }
 
     // # Corrección de errores CFB(2):
@@ -239,7 +234,7 @@ pub fn modus_cfb_hc_cipher(
     if c_0.len() != block_size {
         error("The initial block is not the size of a normal block");
         cipher_text.push(1);
-        return cipher_text;
+        return (0,cipher_text);
     } 
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                            // Variable para reajustar el mensaje
@@ -266,11 +261,7 @@ pub fn modus_cfb_hc_cipher(
         cipher_text.extend(_cipher_block);                              // Se anexa al resultado final
     }
 
-    // Eliminación de los datos de holgura (padding) del mensaje final
-    let _cipher_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
-    cipher_text.drain(( _cipher_size - padding ).._cipher_size);    // Se le recortan los datos de holgura
-
-    return cipher_text;
+    return (padding, cipher_text);
 }
 
 
@@ -282,7 +273,7 @@ pub fn modus_ofb_hc_cipher(
     c_0 :&[i32],        // Vector de inicialización (IV)
     key : &[i32],       // Llave
     m : i32             // Modulo
-) -> Vec<i32> {
+) -> (usize, Vec<i32>) {
     let mut cipher_text : Vec<i32> = Vec::new(); // Variable de retorno
 
     // # Corrección de errores OFB(1):
@@ -290,7 +281,7 @@ pub fn modus_ofb_hc_cipher(
     if key.len() != (block_size * block_size) {
         error("The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
-        return cipher_text;
+        return (0,cipher_text);
     }
 
     // # Corrección de errores OFB(2):
@@ -298,7 +289,7 @@ pub fn modus_ofb_hc_cipher(
     if c_0.len() != block_size {
         error("The initial block is not the size of a normal block");
         cipher_text.push(1);
-        return cipher_text;
+        return (0,cipher_text);
     } 
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                            // Variable auxiliar para el mensaje
@@ -324,11 +315,8 @@ pub fn modus_ofb_hc_cipher(
         cipher_text.extend(_cipher_block);
     }
 
-    // Recorte de padding para recuperar tamaño original
-    let _cipher_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
-    cipher_text.drain(( _cipher_size - padding ).._cipher_size);    // Se le recortan los datos de holgura
 
-    return cipher_text;
+    return (padding, cipher_text);
 }
 
 // -> Modo de operación Propagating Cipher Block Chaining (PCBC)
@@ -340,7 +328,7 @@ pub fn modus_pcbc_hc_cipher(
     c_0 :&[i32],        // Vector de inicialización (IV)
     key : &[i32],       // Llave
     m : i32             // Módulo
-) -> Vec<i32> {
+) -> (usize, Vec<i32>) {
     let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
 
     // Correción de errores CBC (1):
@@ -348,7 +336,7 @@ pub fn modus_pcbc_hc_cipher(
     if key.len() != (block_size * block_size) {
         error("The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
-        return cipher_text;
+        return (0,cipher_text);
     }
 
     // Correción de errores CBC (2):
@@ -356,7 +344,7 @@ pub fn modus_pcbc_hc_cipher(
     if c_0.len() != block_size {
         error("The initial block is not the size of a normal block");
         cipher_text.push(1);
-        return cipher_text;
+        return (0,cipher_text);
     } 
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
@@ -384,11 +372,7 @@ pub fn modus_pcbc_hc_cipher(
         cipher_text.extend(_cipher_block);                      // Se guarda el bloque cifrado en el texto final
     }
 
-    
-    let _cipher_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
-    cipher_text.drain(( _cipher_size - padding ).._cipher_size);    // Se le recortan los datos de holgura
-
-    return cipher_text;
+    return (padding, cipher_text);
 }
 
 // -> Modo de operación Counter (CTR)
@@ -398,7 +382,7 @@ pub fn modus_ctr_hc_cipher(
     block_size : usize, // Tamaño de bloque
     key : &[i32],       // Llave
     m : i32             // Modulo
-) -> ( Vec<i32>, Vec<i32> ) {
+) -> ( usize, Vec<i32>, Vec<i32> ) {
     let mut nonce : Vec<i32> = Vec::new();          // Variable de nonce
     let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
 
@@ -408,7 +392,7 @@ pub fn modus_ctr_hc_cipher(
         error("The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
         nonce.push(1);
-        return (nonce, cipher_text);
+        return (0,nonce, cipher_text);
     }
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
@@ -452,10 +436,8 @@ pub fn modus_ctr_hc_cipher(
     }
 
     nonce.pop();    
-    let _cipher_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
-    cipher_text.drain(( _cipher_size - padding ).._cipher_size);    // Se le recortan los datos de holgura
 
-    return (nonce, cipher_text);
+    return (padding, nonce, cipher_text);
 }
 
 
@@ -484,7 +466,7 @@ pub fn modus_pcbc_hc_decipher () {
 }
 
 pub fn modus_ctr_hc_decipher () {
-    
+
 }
 
 /* --------------------------------------------------------------------------------
