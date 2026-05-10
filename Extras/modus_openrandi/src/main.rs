@@ -1,3 +1,8 @@
+
+use std::collections::Hashmap;
+use std::time::Instant;
+
+
 use colored::Colorize;
 
 /*  
@@ -11,7 +16,7 @@ fn main() {
     let init = [9, 99, 11];
     let key = [ 1, 2, 3, 4, 5, 6, 11, 9, 8];
     let m = 256;
-    let mesage = [10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10];
+    let mesage = [10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9];
 
     let cipher_text = hill_cipher(&block, &key, m);
     debug_block("cipher Text", &cipher_text);
@@ -39,16 +44,25 @@ fn main() {
     --------------------------------------------------------------------------------
 */  
 
+// -> Hill Cipher : Aplicacion del cifrador en hill basado en algebra lineal.
+fn hill_cipher( 
+    block: &[i32], 
+    key: &[i32], 
+    m: i32
+) -> Vec<i32> {
 
-fn hill_cipher( block: &[i32] , key: &[i32], m: i32) -> Vec<i32>{
+    // Variable de retorno
     let mut cipher_text: Vec<i32> = Vec::new();
 
+    // Correción de errores
+    // La clave tiene que ser al menos del tamaño del blocke al cuadrado, sino el cifrado es imposible de realizar
     if key.len() != (block.len() * block.len()) {
         cipher_text.push(1);
         error("The key must be a square matrix of the same size as the block");
         return cipher_text;
     }
 
+    // Ciclo: Realiza una multiplicación de matrices
     for i in 0..block.len() {
         let mut sum = 0;
 
@@ -59,48 +73,47 @@ fn hill_cipher( block: &[i32] , key: &[i32], m: i32) -> Vec<i32>{
         cipher_text.push(sum);
     }
 
+    // Regresa el texto cifrado
     return cipher_text;
 }
 
+
+// -> Modo de operación Electronic Code Book (ECB) con Hill  cipher: Se aplica el cifrado directamente en cada bloque
 pub fn modus_ecb_hc(
     msg : &[i32], 
     block_size : usize, 
     key : &[i32], 
     m : i32 
 ) -> Vec<i32> {
+    let mut cipher_text: Vec<i32> = Vec::new();             // Variable de retorno
 
-    let mut cipher_text: Vec<i32> = Vec::new();
-
+    // Correción de errores ECB(1):
+    // Si la llave no corresponde con el tamaño correcto para el cifrado hill retorna.
     if key.len() != (block_size * block_size) {
         error("The key does not correspond with the block size for hill cipher");
         cipher_text.push(1);
         return cipher_text;
     }
 
-    let mut _tmp_msg: Vec<i32> = Vec::new();
-    let padding = block_size - (msg.len() % block_size);
+    let mut _tmp_msg: Vec<i32> = Vec::new();                // Variable para copiar y reajustar el mensaje a cifrar
+    let padding = block_size - (msg.len() % block_size);    // Variable para determinar si el ultimo bloque tiene suficiente tamaño
 
-    _tmp_msg = msg.to_vec().clone();
+    _tmp_msg = msg.to_vec().clone();        // Se clona el mensaje original
 
-    if msg.len() % block_size != 0 {
-        //debug("ECB", "Adding 1 to matrix to complete the block");
+    // Correción de errores ECB(2):
+    // En caso de que el bloque final no tenga suficiente tamaño 
+    if padding != 0 {
         for _ in 0..padding {
-            _tmp_msg.push(1);
+            _tmp_msg.push(1);       
         }
     }
-    //debug_block("ECB", &_tmp_msg);
 
     let msg_blocks = _tmp_msg.chunks(block_size);
-    //debug("ECB", "Message blocks created, starting encryption");
 
     for i in msg_blocks { 
         let block = i.to_vec();
-        //debug_block("ECB", &block);
         let cipher_block = hill_cipher(&block, key, m);
-        //debug_block("ECB", &cipher_block);
         cipher_text.extend(cipher_block);
-        //debug("ECB", "Adding block");
-        //debug_block("ECB", &cipher_text);
     }
 
 
