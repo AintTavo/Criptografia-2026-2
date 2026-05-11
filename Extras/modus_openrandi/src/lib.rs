@@ -194,12 +194,13 @@ pub fn modus_cbc_hc_cipher(
 
 // -> Modo de operación Cipher Feedback (CFB) : 
 // Cn = Ek(Cn-1) xor p 
+#[wasm_bindgen]
 pub fn modus_cfb_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
     c_0 :&[i32],        // Vector de inicialización (IV)
     key : &[i32],       // Llave
     m : i32             // Modulo
-) -> (usize, Vec<i32>) {
+) -> JsValue {
     let mut cipher_text : Vec<i32> = Vec::new(); // Variable de retorno
 
     let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
@@ -208,8 +209,7 @@ pub fn modus_cfb_hc_cipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -218,16 +218,14 @@ pub fn modus_cfb_hc_cipher(
     // Verificación de integridad de la llave para el cifrado Hill
     if key.len() != (block_size * block_size) {
         println!("error : The key does not correspond with the block size for hill cipher");
-        cipher_text.push(1);
-        return (0,cipher_text);
+        return JsValue::NULL;
     }
 
     // # Corrección de errores CFB(2):
     // Verificación de que el IV tenga el tamaño de bloque correspondiente
     if c_0.len() != block_size {
         println!("error : The initial block is not the size of a normal block");
-        cipher_text.push(1);
-        return (0,cipher_text);
+        return JsValue::NULL;
     } 
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                            // Variable para reajustar el mensaje
@@ -254,18 +252,20 @@ pub fn modus_cfb_hc_cipher(
         cipher_text.extend(_cipher_block);                              // Se anexa al resultado final
     }
 
-    return (padding, cipher_text);
+    let result = CipherResult { padding : padding, cipher_text : cipher_text};
+    return to_value(&result).unwrap();
 }
 
 
 // -> Modo de operación Output Feedback (OFB) :
 // C = Ek(Co) xor p
+#[wasm_bindgen]
 pub fn modus_ofb_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
     c_0 :&[i32],        // Vector de inicialización (IV)
     key : &[i32],       // Llave
     m : i32             // Modulo
-) -> (usize, Vec<i32>) {
+) -> JsValue {
     let mut cipher_text : Vec<i32> = Vec::new(); // Variable de retorno
 
     let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
@@ -274,8 +274,7 @@ pub fn modus_ofb_hc_cipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -284,16 +283,14 @@ pub fn modus_ofb_hc_cipher(
     // Verificación de tamaño de llave
     if key.len() != (block_size * block_size) {
         println!("error : The key does not correspond with the block size for hill cipher");
-        cipher_text.push(1);
-        return (0,cipher_text);
+        return JsValue::NULL;
     }
 
     // # Corrección de errores OFB(2):
     // Verificación de tamaño del bloque inicial
     if c_0.len() != block_size {
         println!("error : The initial block is not the size of a normal block");
-        cipher_text.push(1);
-        return (0,cipher_text);
+        return JsValue::NULL;
     } 
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                            // Variable auxiliar para el mensaje
@@ -320,7 +317,8 @@ pub fn modus_ofb_hc_cipher(
     }
 
 
-    return (padding, cipher_text);
+    let result = CipherResult { padding : padding, cipher_text : cipher_text};
+    return to_value(&result).unwrap();
 }
 
 
