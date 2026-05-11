@@ -324,12 +324,13 @@ pub fn modus_ofb_hc_cipher(
 
 // -> Modo de operación Propagating Cipher Block Chaining (PCBC)
 // C = Ek ( (p n-1 xor C n-1) xor p )
+#[wasm_bindgen]
 pub fn modus_pcbc_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
     c_0 :&[i32],        // Vector de inicialización (IV)
     key : &[i32],       // Llave
     m : i32             // Módulo
-) -> (usize, Vec<i32>) {
+) -> JsValue {
     let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
 
     let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
@@ -338,8 +339,7 @@ pub fn modus_pcbc_hc_cipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -348,16 +348,14 @@ pub fn modus_pcbc_hc_cipher(
     // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
     if key.len() != (block_size * block_size) {
         println!("error : The key does not correspond with the block size for hill cipher");
-        cipher_text.push(1);
-        return (0,cipher_text);
+        return JsValue::NULL;
     }
 
     // Correción de errores CBC (2):
     // Si el bloque de cifrado inicial no corresponde con el tamaño correcto retorna 1.
     if c_0.len() != block_size {
         println!("error : The initial block is not the size of a normal block");
-        cipher_text.push(1);
-        return (0,cipher_text);
+        return JsValue::NULL;
     } 
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
@@ -385,7 +383,8 @@ pub fn modus_pcbc_hc_cipher(
         cipher_text.extend(_cipher_block);                      // Se guarda el bloque cifrado en el texto final
     }
 
-    return (padding, cipher_text);
+    let result = CipherResult { padding : padding, cipher_text : cipher_text};
+    return to_value(&result).unwrap();
 }
 
 
