@@ -478,6 +478,7 @@ pub fn modus_ctr_hc_cipher(
 
 // -> Modo de operación Electronic CodeBook decifrado
 // p = Dk(C)
+#[wasm_bindgen]
 pub fn modus_ecb_hc_decipher(
     cipher_text : &[i32],
     key : &[i32],
@@ -539,13 +540,14 @@ pub fn modus_ecb_hc_decipher(
 
 // -> Modo de operación Cipher Block Chaining decifrado
 // p = Dk(Cn) xor Cn-1
+#[wasm_bindgen]
 pub fn modus_cbc_hc_decipher(
     cipher_text : &[i32],
     c_0 : &[i32],
     key : &[i32],
     padding : usize,
     m : i32
-) -> Vec<i32> {
+) -> JsValue {
 
     let mut plain_text : Vec<i32> = Vec::new();     // Variable de retorno
     let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
@@ -554,8 +556,7 @@ pub fn modus_cbc_hc_decipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -564,8 +565,7 @@ pub fn modus_cbc_hc_decipher(
     // Si el mensaje no se puede dividir perfectamente entre el tamaño del bloque, esto retorna
     if (cipher_text.len() % block_size) != 0 {
         println!("Error: The message size does not correspond with the block size");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     // Preparación del mensaje
@@ -592,19 +592,21 @@ pub fn modus_cbc_hc_decipher(
     let _msg_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
     plain_text.drain(( _msg_size - padding ).._msg_size);    // Se le recortan los datos de holgura
 
-    return plain_text;
+    let result = DecipherResult { plain_text : plain_text};
+    return to_value(&result).unwrap();
 }
 
 
 // -> Modo de operación Cipher Feedback decifrado
 // p = Ek(Cn-1) xor Cn
+#[wasm_bindgen]
 pub fn modus_cfb_hc_decipher(
     cipher_text : &[i32],
     c_0 : &[i32],
     key : &[i32],
     padding : usize,
     m : i32
-) -> Vec<i32> {
+) -> JsValue {
 
     let mut plain_text : Vec<i32> = Vec::new();     // Variable de retorno
     let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
@@ -613,8 +615,7 @@ pub fn modus_cfb_hc_decipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -623,8 +624,7 @@ pub fn modus_cfb_hc_decipher(
     // Si el mensaje no se puede dividir perfectamente entre el tamaño del bloque, esto retorna
     if (cipher_text.len() % block_size) != 0 {
         println!("Error: The message size does not correspond with the block size");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     // Preparación del mensaje
@@ -649,19 +649,21 @@ pub fn modus_cfb_hc_decipher(
     let _msg_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
     plain_text.drain(( _msg_size - padding ).._msg_size);    // Se le recortan los datos de holgura
 
-    return plain_text;
+    let result = DecipherResult { plain_text : plain_text};
+    return to_value(&result).unwrap();
 }
 
 
 // -> Modo de operación Output Feedback decifrado
-// p = Ek(Co) xor Cn 
+// p = Ek(Co) xor Cn
+#[wasm_bindgen]
 pub fn modus_ofb_hc_decipher(
     cipher_text : &[i32],
     c_0 : &[i32],
     key : &[i32],
     padding : usize,
     m : i32
-) -> Vec<i32> {
+) -> JsValue {
     
     let mut plain_text : Vec<i32> = Vec::new();     // Variable de retorno
     let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
@@ -670,8 +672,7 @@ pub fn modus_ofb_hc_decipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -680,8 +681,7 @@ pub fn modus_ofb_hc_decipher(
     // Si el mensaje no se puede dividir perfectamente entre el tamaño del bloque, esto retorna
     if (cipher_text.len() % block_size) != 0 {
         println!("Error: The message size does not correspond with the block size");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     // Preparación del mensaje
@@ -706,19 +706,21 @@ pub fn modus_ofb_hc_decipher(
     let _msg_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
     plain_text.drain(( _msg_size - padding ).._msg_size);    // Se le recortan los datos de holgura
 
-    return plain_text;
+    let result = DecipherResult { plain_text : plain_text};
+    return to_value(&result).unwrap();
 }
 
 
 // -> Modo de operación Electronic CodeBook decifrado
 // p = Dk(Cn) xor (pn-1 xor Cn-1)
+#[wasm_bindgen]
 pub fn modus_pcbc_hc_decipher(
     cipher_text : &[i32],
     c_0 : &[i32],
     key : &[i32],
     padding : usize,
     m : i32
-) -> Vec<i32> {
+) -> JsValue {
     let mut plain_text : Vec<i32> = Vec::new();     // Variable de retorno
     let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
 
@@ -726,8 +728,7 @@ pub fn modus_pcbc_hc_decipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -736,8 +737,7 @@ pub fn modus_pcbc_hc_decipher(
     // Si el mensaje no se puede dividir perfectamente entre el tamaño del bloque, esto retorna
     if (cipher_text.len() % block_size) != 0 {
         println!("Error: The message size does not correspond with the block size");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     // Preparación del mensaje
@@ -764,19 +764,21 @@ pub fn modus_pcbc_hc_decipher(
     let _msg_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
     plain_text.drain(( _msg_size - padding ).._msg_size);    // Se le recortan los datos de holgura
 
-    return plain_text;
+    let result = DecipherResult { plain_text : plain_text};
+    return to_value(&result).unwrap();
 }
 
 
 // -> Modo de operación Electronic CodeBook decifrado
 // p = Ek(Nonce) xor Cn 
+#[wasm_bindgen]
 pub fn modus_ctr_hc_decipher(
     cipher_text : &[i32],
     nonce : &[i32],
     key : &[i32],
     padding : usize,
     m : i32
-) -> Vec<i32> {
+) -> JsValue {
 
     let mut plain_text : Vec<i32> = Vec::new();     // Variable de retorno
     let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
@@ -785,8 +787,7 @@ pub fn modus_ctr_hc_decipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -795,16 +796,14 @@ pub fn modus_ctr_hc_decipher(
     // Si el mensaje no se puede dividir perfectamente entre el tamaño del bloque, esto retorna
     if (cipher_text.len() % block_size) != 0 {
         println!("Error: The message size does not correspond with the block size");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     // Correción de errores CTR_D(3):
     // Si el nonce no es del tamaño de uno menos que el de bloque retorna
     if nonce.len() != (block_size - 1) {
         println!("Error: The noance is not from the required size");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     // Preparación del mensaje
@@ -830,7 +829,8 @@ pub fn modus_ctr_hc_decipher(
     let _msg_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
     plain_text.drain(( _msg_size - padding ).._msg_size);    // Se le recortan los datos de holgura
 
-    return plain_text;
+    let result = DecipherResult { plain_text : plain_text};
+    return to_value(&result).unwrap();
 
 }
 
