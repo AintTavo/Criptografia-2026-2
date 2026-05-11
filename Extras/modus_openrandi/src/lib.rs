@@ -29,6 +29,10 @@ pub struct CipherResultCTR {
     pub cipher_text : Vec<i32>,
 }
 
+#[derive(Serialize)]
+pub struct DecipherResult {
+    pub plain_text : Vec<i32>,
+}
 // ##########################
 // Sub main : Hill 
 // ##########################
@@ -479,7 +483,7 @@ pub fn modus_ecb_hc_decipher(
     key : &[i32],
     padding : usize,
     m : i32
-) -> Vec<i32> {
+) -> JsValue {
     let mut plain_text : Vec<i32> = Vec::new();     // Variable de retorno
     let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
 
@@ -487,8 +491,7 @@ pub fn modus_ecb_hc_decipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -497,8 +500,7 @@ pub fn modus_ecb_hc_decipher(
     // Si el mensaje no se puede dividir perfectamente entre el tamaño del bloque, esto retorna
     if (cipher_text.len() % block_size) != 0 {
         println!("Error: The message size does not correspond with the block size");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     // Preparación del mensaje
@@ -529,7 +531,9 @@ pub fn modus_ecb_hc_decipher(
     let _msg_size = cipher_text.len();                           // Se calcula el tamaño del mensaje final
     plain_text.drain(( _msg_size - padding ).._msg_size);    // Se le recortan los datos de holgura
 
-    return plain_text;
+
+    let result = DecipherResult { plain_text : plain_text};
+    return to_value(&result).unwrap();
 }
 
 
