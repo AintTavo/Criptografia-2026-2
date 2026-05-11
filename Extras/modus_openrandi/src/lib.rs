@@ -32,7 +32,6 @@ fn hill_cipher(
     key: &[i32], 
     m: i32
 ) -> Vec<i32> {
-
     // Variable de retorno
     let mut cipher_text : Vec<i32> = Vec::new();
 
@@ -69,11 +68,21 @@ fn hill_cipher(
 #[wasm_bindgen]
 pub fn modus_ecb_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
-    block_size : usize, // Tamaño de bloque a encriptar
     key : &[i32],       // Llave
     m : i32             // Modulo
 ) -> JsValue {
     let mut cipher_text : Vec<i32> = Vec::new();                            // Variable de retorno
+
+    let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
+
+    // Corección de errores ECB_D(1):
+    // Si la llave no es del tamaño correcto no se decodifica, retorna
+    if block_size != block_size.trunc() {
+        println!("Error: The key size muss be the square of a number");
+        return JsValue::NULL;
+    }
+
+    let block_size = block_size as usize;   // Se pasa el resultado a usize
 
     // # Correción de errores ECB(1):
     // Si la llave no corresponde con el tamaño correcto para el cifrado hill retorna.
@@ -113,37 +122,44 @@ pub fn modus_ecb_hc_cipher(
     }
     
     let result = CipherResult { padding : padding, cipher_text : cipher_text};
-    
     return to_value(&result).unwrap();
 }
 
 
 // -> Modo de operación Cipher Block Chaining (CBC) :
 // Cn = Ek(p xor Cn-1)
+#[wasm_bindgen]
 pub fn modus_cbc_hc_cipher( 
     msg : &[i32],           // Mensaje a encriptar
-    block_size : usize,     // Tamaño del bloque
     c_0 :&[i32],            // Bloque de cifrado original
     key : &[i32],           // Llave
     m : i32                 // Modulo
-) -> (usize, Vec<i32>)  {
+) -> JsValue {
 
     let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
+    let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
+
+    // Corección de errores ECB_D(1):
+    // Si la llave no es del tamaño correcto no se decodifica, retorna
+    if block_size != block_size.trunc() {
+        println!("Error: The key size muss be the square of a number");
+        return JsValue::NULL;
+    }
+
+    let block_size = block_size as usize;   // Se pasa el resultado a usize
 
     // Correción de errores CBC (1):
     // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
     if key.len() != (block_size * block_size) {
         println!("error : The key does not correspond with the block size for hill cipher");
-        cipher_text.push(1);
-        return (0,cipher_text);
+        return JsValue::NULL;
     }
 
     // Correción de errores CBC (2):
     // Si el bloque de cifrado inicial no corresponde con el tamaño correcto retorna 1.
     if c_0.len() != block_size {
         println!("error : The initial block is not the size of a normal block");
-        cipher_text.push(1);
-        return (0,cipher_text);
+        return JsValue::NULL;
     } 
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
@@ -171,7 +187,8 @@ pub fn modus_cbc_hc_cipher(
         cipher_text.extend(_cipher_block);                      // Se guarda el bloque cifrado en el texto final
     }
 
-    return (padding, cipher_text);
+    let result = CipherResult { padding : padding, cipher_text : cipher_text};
+    return to_value(&result).unwrap();
 }
 
 
@@ -179,12 +196,23 @@ pub fn modus_cbc_hc_cipher(
 // Cn = Ek(Cn-1) xor p 
 pub fn modus_cfb_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
-    block_size : usize, // Tamaño de bloque
     c_0 :&[i32],        // Vector de inicialización (IV)
     key : &[i32],       // Llave
     m : i32             // Modulo
 ) -> (usize, Vec<i32>) {
     let mut cipher_text : Vec<i32> = Vec::new(); // Variable de retorno
+
+    let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
+
+    // Corección de errores ECB_D(1):
+    // Si la llave no es del tamaño correcto no se decodifica, retorna
+    if block_size != block_size.trunc() {
+        println!("Error: The key size muss be the square of a number");
+        plain_text.push(1);
+        return plain_text;
+    }
+
+    let block_size = block_size as usize;   // Se pasa el resultado a usize
 
     // # Corrección de errores CFB(1):
     // Verificación de integridad de la llave para el cifrado Hill
@@ -234,12 +262,23 @@ pub fn modus_cfb_hc_cipher(
 // C = Ek(Co) xor p
 pub fn modus_ofb_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
-    block_size : usize, // Tamaño de bloque
     c_0 :&[i32],        // Vector de inicialización (IV)
     key : &[i32],       // Llave
     m : i32             // Modulo
 ) -> (usize, Vec<i32>) {
     let mut cipher_text : Vec<i32> = Vec::new(); // Variable de retorno
+
+    let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
+
+    // Corección de errores ECB_D(1):
+    // Si la llave no es del tamaño correcto no se decodifica, retorna
+    if block_size != block_size.trunc() {
+        println!("Error: The key size muss be the square of a number");
+        plain_text.push(1);
+        return plain_text;
+    }
+
+    let block_size = block_size as usize;   // Se pasa el resultado a usize
 
     // # Corrección de errores OFB(1):
     // Verificación de tamaño de llave
@@ -289,12 +328,23 @@ pub fn modus_ofb_hc_cipher(
 // C = Ek ( (p n-1 xor C n-1) xor p )
 pub fn modus_pcbc_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
-    block_size : usize, // Tamaño de bloque
     c_0 :&[i32],        // Vector de inicialización (IV)
     key : &[i32],       // Llave
     m : i32             // Módulo
 ) -> (usize, Vec<i32>) {
     let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
+
+    let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
+
+    // Corección de errores ECB_D(1):
+    // Si la llave no es del tamaño correcto no se decodifica, retorna
+    if block_size != block_size.trunc() {
+        println!("Error: The key size muss be the square of a number");
+        plain_text.push(1);
+        return plain_text;
+    }
+
+    let block_size = block_size as usize;   // Se pasa el resultado a usize
 
     // Correción de errores CBC (1):
     // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
@@ -345,12 +395,23 @@ pub fn modus_pcbc_hc_cipher(
 // C = Ek(Nonce * Counter) xor p
 pub fn modus_ctr_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
-    block_size : usize, // Tamaño de bloque
     key : &[i32],       // Llave
     m : i32             // Modulo
 ) -> ( usize, Vec<i32>, Vec<i32> ) {
     let mut nonce : Vec<i32> = Vec::new();          // Variable de nonce
     let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
+
+    let block_size = (key.len() as f64).sqrt();     // Se saca el tañaño y se hace una raíz cuadrada
+
+    // Corección de errores ECB_D(1):
+    // Si la llave no es del tamaño correcto no se decodifica, retorna
+    if block_size != block_size.trunc() {
+        println!("Error: The key size muss be the square of a number");
+        plain_text.push(1);
+        return plain_text;
+    }
+
+    let block_size = block_size as usize;   // Se pasa el resultado a usize
 
     // Correción de errores CTR (1):
     // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
