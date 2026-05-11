@@ -413,11 +413,3 @@ fn error( message : &str ) {
     println!("{} {}", "Error:".red().bold(), message.red());
 } 
 
-
-// -> Función para imprimir una salida formateada para debug
-fn debug(label : &str,  message : &str ) {
-    print!("{}", "Debug [".yellow().bold());
-    print!("{}", label.yellow().italic());
-    print!("{} ", "]: ".yellow().bold());
-    println!("{}", message.yellow());
-}
