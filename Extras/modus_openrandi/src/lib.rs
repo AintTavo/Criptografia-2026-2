@@ -22,6 +22,13 @@ pub struct CipherResult {
     pub cipher_text : Vec<i32>,
 }
 
+#[derive(Serialize)]
+pub struct CipherResultCTR {
+    pub padding : usize,
+    pub nonce : Vec<i32>,
+    pub cipher_text : Vec<i32>,
+}
+
 // ##########################
 // Sub main : Hill 
 // ##########################
@@ -390,11 +397,12 @@ pub fn modus_pcbc_hc_cipher(
 
 // -> Modo de operación Counter (CTR)
 // C = Ek(Nonce * Counter) xor p
+#[wasm_bindgen]
 pub fn modus_ctr_hc_cipher(
     msg : &[i32],       // Mensaje a encriptar
     key : &[i32],       // Llave
     m : i32             // Modulo
-) -> ( usize, Vec<i32>, Vec<i32> ) {
+) -> JsValue {
     let mut nonce : Vec<i32> = Vec::new();          // Variable de nonce
     let mut cipher_text : Vec<i32> = Vec::new();     // Variable de retorno
 
@@ -404,8 +412,7 @@ pub fn modus_ctr_hc_cipher(
     // Si la llave no es del tamaño correcto no se decodifica, retorna
     if block_size != block_size.trunc() {
         println!("Error: The key size muss be the square of a number");
-        plain_text.push(1);
-        return plain_text;
+        return JsValue::NULL;
     }
 
     let block_size = block_size as usize;   // Se pasa el resultado a usize
@@ -414,9 +421,7 @@ pub fn modus_ctr_hc_cipher(
     // Si la llave para el cifrado hill no es el cuadrado del tamaño del bloque retorna 1.
     if key.len() != (block_size * block_size) {
         println!("error : The key does not correspond with the block size for hill cipher");
-        cipher_text.push(1);
-        nonce.push(1);
-        return (0,nonce, cipher_text);
+        return JsValue::NULL;
     }
 
     let mut _tmp_msg: Vec<i32> = Vec::new();                               // Variable para copiar y reajustar el mensaje a cifrar
@@ -458,7 +463,8 @@ pub fn modus_ctr_hc_cipher(
 
     nonce.pop();    // se elimina el contador, se mandan unicamente los numeros aleatorios
 
-    return (padding, nonce, cipher_text);
+    let result = CipherResultCTR { padding : padding, nonce : nonce, cipher_text : cipher_text};
+    return to_value(&result).unwrap();
 }
 
 
