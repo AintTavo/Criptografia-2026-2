@@ -47,7 +47,7 @@ fn main() {
     debug_block("PCBC_C", &cipher_text);
     let plain = modus_pcbc_hc_decipher(&cipher_text, &init, &key, _p, m);
     debug_block("PCBC_C", &plain);
-
+ 
     let (_p, nonce, cipher_text) = modus_ctr_hc_cipher(&mesage, 3, &key, m);
     debug_block("CTR_C", &cipher_text);
     let plain = modus_ctr_hc_decipher(&cipher_text, &nonce, &key, _p, m);
