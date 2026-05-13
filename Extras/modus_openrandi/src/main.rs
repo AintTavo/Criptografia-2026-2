@@ -14,7 +14,7 @@ use rand::random;
 */  
 fn main() {
     let init = [9, 99, 11];
-    let key = [ 1, 2, 3, 4, 5, 6, 11, 9, 8];
+    let key = [ 1, 2, 3, 4];
     let m = 256;
     let mesage = [10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50, 9, 10, 50];
     debug_block("Original", &mesage);
@@ -26,6 +26,9 @@ fn main() {
     debug_block("ECB_C", &cipher_text);
     let plain = modus_ecb_hc_decipher(&cipher_text, &key, _p, m);
     debug_block("ECB_D", &plain);
+
+    let inverse_key = matrix_inverse_module(&key, m as u32);
+    debug_block("Inverse Key", &inverse_key);
 
     // Prueba CBC
     let (_p,cipher_text) = modus_cbc_hc_cipher(&mesage, 3, &init, &key, m);
