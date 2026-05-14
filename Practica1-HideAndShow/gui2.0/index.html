@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hide &amp; Show — Steganography</title>
+<link rel="icon" type="image/png" href="../../docs/png/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<header>
+  <div class="logo" onclick="window.location.assign('../../index.html')">HS</div>
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-page="hide">Hide</button>
+    <button class="mode-tab" data-page="reveal">Reveal</button>
+  </div>
+  <div class="hdr-right">WASM · C · STEGO</div>
+</header>
+
+<!-- ═══════════ HIDE PAGE ═══════════ -->
+<div class="page active" id="page-hide">
+  <div class="workspace">
+
+    <div class="section-title">BMP Image</div>
+
+    <div class="drop-zone" id="dz-bmp-hide">
+      <input type="file" id="bmp-input-hide" accept=".bmp" style="display:none"/>
+      <div class="drop-icon">⛁</div>
+      <div class="drop-label">Drop a BMP image here<br/>or click to select</div>
+      <span class="drop-hint">.bmp · 24-bit</span>
+      <span class="drop-filename" id="fn-bmp-hide"></span>
+    </div>
+
+    <div class="section-title">Message to Hide</div>
+
+    <div class="source-toggle" id="source-toggle">
+      <button class="src-btn active" data-source="file">File</button>
+      <button class="src-btn" data-source="text">Text</button>
+    </div>
+
+    <div class="source-section active" id="src-file">
+      <div class="drop-zone" id="dz-txt">
+        <input type="file" id="txt-input" accept=".txt" style="display:none"/>
+        <div class="drop-icon">📄</div>
+        <div class="drop-label">Drop a .txt file here<br/>or click to select</div>
+        <span class="drop-hint">.txt · utf-8</span>
+        <span class="drop-filename" id="fn-txt"></span>
+      </div>
+    </div>
+
+    <div class="source-section" id="src-text">
+      <textarea class="txt-textarea" id="txt-textarea" placeholder="Type the message you want to hide in the image..."></textarea>
+    </div>
+
+    <div class="action-row">
+      <button class="action-btn" id="btn-hide">Hide &amp; Download</button>
+    </div>
+
+    <div class="console-wrap">
+      <div class="console-header">▶ console</div>
+      <div class="console" id="console-hide">Loading WebAssembly...</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ REVEAL PAGE ═══════════ -->
+<div class="page" id="page-reveal">
+  <div class="workspace">
+
+    <div class="section-title">Image with Secret</div>
+
+    <div class="drop-zone" id="dz-bmp-reveal">
+      <input type="file" id="bmp-input-reveal" accept=".bmp" style="display:none"/>
+      <div class="drop-icon">⛁</div>
+      <div class="drop-label">Drop the BMP image with the hidden message<br/>or click to select</div>
+      <span class="drop-hint">.bmp · 24-bit</span>
+      <span class="drop-filename" id="fn-bmp-reveal"></span>
+    </div>
+
+    <div class="result-box" id="result-box">
+      <div class="result-label">Revealed Message</div>
+      <div class="result-text" id="result-text"></div>
+    </div>
+
+    <div class="action-row">
+      <button class="action-btn" id="btn-reveal">Reveal Secret</button>
+    </div>
+
+    <div class="console-wrap">
+      <div class="console-header">▶ console</div>
+      <div class="console" id="console-reveal">Loading WebAssembly...</div>
+    </div>
+
+  </div>
+</div>
+
+<script src="main.js"></script>
+<script src="index.js"></script>
+
+</body>
+</html>
