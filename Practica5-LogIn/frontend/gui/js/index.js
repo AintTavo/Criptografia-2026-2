@@ -56,7 +56,7 @@ function getJWT() {
       body: JSON.stringify({ jwt })
     });
     if (res.ok) {
-      window.location.href = 'secret.html';
+      window.location.href = './html/secret.html';
     }
   } catch { /* red caída, mostrar login normal */ }
 })();
@@ -122,7 +122,7 @@ async function doLogin() {
     if (res.ok && data.jwt) {
       saveJWT(data.jwt);
       showToast('✓ Acceso concedido. Redirigiendo…', 'success');
-      setTimeout(() => { window.location.href = 'secret.html'; }, 1000);
+      setTimeout(() => { window.location.href = './html/secret.html'; }, 1000);
     } else {
       showToast(data.msg_err || 'Credenciales incorrectas', 'error');
       showError('l-pass', 'Credenciales incorrectas');
@@ -158,7 +158,7 @@ async function doSignin() {
     if (res.ok && data.jwt) {
       saveJWT(data.jwt);
       showToast('✓ Cuenta creada. Redirigiendo…', 'success');
-      setTimeout(() => { window.location.href = 'secret.html'; }, 1000);
+      setTimeout(() => { window.location.href = './html/secret.html'; }, 1000);
     } else {
       showToast(data.msg_err || 'Error al crear la cuenta', 'error');
     }
