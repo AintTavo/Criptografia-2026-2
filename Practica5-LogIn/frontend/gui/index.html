@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ACCESO — Sistema Seguro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/index.css"/>
+</head>
+<body>
+
+  <header class="site-header">
+    <span class="logo" id="logo">SYS://AUTH</span>
+    <span class="header-tag">v2.4.1 · SECURE</span>
+  </header>
+
+  <div class="wrapper">
+    <!-- Tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active-login" id="tab-login" onclick="setMode('login')">
+        Iniciar sesión
+      </button>
+      <button class="mode-tab" id="tab-signin" onclick="setMode('signin')">
+        Registrarse
+      </button>
+    </div>
+
+    <!-- Card -->
+    <div class="card" id="main-card">
+
+      <!-- ─── PANEL LOGIN ─── -->
+      <div class="form-panel active" id="panel-login">
+        <div class="card-title">Bienvenido</div>
+        <div class="card-sub">Acceso al sistema</div>
+
+        <div class="field">
+          <label for="l-email">Correo electrónico</label>
+          <div class="field-wrap">
+            <input type="email" id="l-email" placeholder="usuario@dominio.com" autocomplete="email" />
+            <span class="field-icon">✉</span>
+          </div>
+          <div class="field-error" id="l-email-err">Correo no válido</div>
+        </div>
+
+        <div class="field">
+          <label for="l-pass">Contraseña</label>
+          <div class="field-wrap">
+            <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password" />
+            <span class="field-icon">🔒</span>
+          </div>
+          <div class="field-error" id="l-pass-err">La contraseña no puede estar vacía</div>
+        </div>
+
+        <button class="btn-main btn-login" id="btn-login" onclick="doLogin()">
+          <span class="btn-text">Iniciar sesión</span>
+          <span class="btn-spinner"></span>
+        </button>
+
+        <div class="divider"><span>OPCIONES</span></div>
+
+        <button class="restore-link" onclick="openRestore()">
+          ↺ &nbsp;¿Olvidaste tu contraseña? Restablécela aquí
+        </button>
+      </div>
+
+      <!-- ─── PANEL SIGNIN ─── -->
+      <div class="form-panel" id="panel-signin">
+        <div class="card-title">Crear cuenta</div>
+        <div class="card-sub">Nuevo registro</div>
+
+        <div class="field">
+          <label for="s-user">Nombre de usuario</label>
+          <div class="field-wrap">
+            <input type="text" id="s-user" placeholder="john_doe" autocomplete="username" />
+            <span class="field-icon">👤</span>
+          </div>
+          <div class="field-error" id="s-user-err">Mínimo 3 caracteres, sin espacios</div>
+        </div>
+
+        <div class="field">
+          <label for="s-email">Correo electrónico</label>
+          <div class="field-wrap">
+            <input type="email" id="s-email" placeholder="usuario@dominio.com" autocomplete="email" />
+            <span class="field-icon">✉</span>
+          </div>
+          <div class="field-error" id="s-email-err">Correo no válido</div>
+        </div>
+
+        <div class="field">
+          <label for="s-pass">Contraseña</label>
+          <div class="field-wrap">
+            <input type="password" id="s-pass" placeholder="Mínimo 8 caracteres" autocomplete="new-password" />
+            <span class="field-icon">🔒</span>
+          </div>
+          <div class="field-error" id="s-pass-err">Mínimo 8 caracteres</div>
+        </div>
+
+        <button class="btn-main btn-signin" id="btn-signin" onclick="doSignin()">
+          <span class="btn-text">Crear cuenta</span>
+          <span class="btn-spinner"></span>
+        </button>
+      </div>
+
+    </div><!-- /card -->
+  </div><!-- /wrapper -->
+
+  <!-- ── Toast ── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ── Modal Restablecer ── -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeRestoreOutside(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeRestore()">✕</button>
+      <div class="modal-title">Restablecer acceso</div>
+      <div class="modal-sub">Ingresa tu correo registrado</div>
+
+      <div class="field">
+        <label for="r-email">Correo electrónico</label>
+        <div class="field-wrap">
+          <input type="email" id="r-email" placeholder="usuario@dominio.com" />
+          <span class="field-icon">✉</span>
+        </div>
+        <div class="field-error" id="r-email-err">Correo no válido</div>
+      </div>
+
+      <button class="btn-restore" onclick="doRestore()">
+        Enviar enlace de restablecimiento
+      </button>
+    </div>
+  </div>
+
+  <script src="./js/index.js"></script>
+</body>
+</html>
