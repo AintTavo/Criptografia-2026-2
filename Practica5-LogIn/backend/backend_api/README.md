@@ -44,5 +44,6 @@ Normalmente en el puerto 3000:
 }
 
 /restore [POST] {
-  token : String 
+  new_pass: String,
+  token : String
 }

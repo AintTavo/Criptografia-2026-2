@@ -57,6 +57,7 @@ struct RestoreInitRequest {
 
 #[derive(Deserialize, Serialize, Debug)]
 struct RestoreFinalRequest {
+    new_pass : String,
     token : String,
 }
 
@@ -449,7 +450,6 @@ async fn handle_request_restore_init(
         }
     }
     
-    // Eliminamos el 'return' explícito innecesario aquí para seguir el estilo idiomático de Rust
     return (
         StatusCode::OK,
         Json(json!({
@@ -465,9 +465,182 @@ async fn handle_request_restore_init(
 // When the users enters the recovery code it verifies
 // If the code is correct, it changes the token status to "used",
 // and restore the password
-async fn handle_request_restore_post() {
+async fn handle_request_restore_post(Json(payload) : Json<RestoreFinalRequest> ) -> impl IntoResponse {
     println!("{} Processing restore request", "[Restore/POST] :".red());
+    let user_id : i32;
+    let status : String;
+    let timestamp : String;
+    let db_path = env::var("DATABASE_FILE").expect("DATABASE_FILE not defined in .env");
+
+    // Obtaining id from the table restore_token
+    {
+        let conn = Connection::open(&db_path).unwrap_or_else(|_| panic!("Connection failed"));
+        let mut stmt = conn.prepare("SELECT user_id,timestamp,status FROM restore_token WHERE token=?1").unwrap_or_else(|_| panic!("Error building the query"));
+        let mut results = stmt.query(params![payload.token]).unwrap();
+
+        match results.next() {
+            Ok(Some(row)) => {
+                user_id = row.get(0).unwrap();
+                timestamp = row.get(1).unwrap();
+                status = row.get(2).unwrap();
+                println!("{} Necessary data in db acquired", "[Restore/POST] :".red());
+            },
+            Ok(None) => {
+                println!("{} {}", "[Restore/POST] :".red(),"The token does not exist".red());
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({
+                        "status" : "failed",
+                        "err_msg" : "The token does not exist",
+                        "err_val" : 1,
+                        "val" : false
+                    }))
+                );
+            },
+            Err(_) => {
+                println!("{} {}", "[Restore/POST] :".red(),"Error iterating through rows".red());
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({
+                        "status" : "failed",
+                        "err_msg" : "Error iterating through rows",
+                        "err_val" : 2,
+                        "val" : false
+                    }))
+                );
+            }
+            
+        }
+        drop(results);
+        drop(stmt);
+        conn.close().expect("Conección no cerrada correctamente");
+    }
+
+    // Revisión de estatus
+    println!("{} Checking token status", "[Restore/POST] :".red());
+    if status != "pending"{
+        println!("{} {}", "[Restore/POST] :".red(),"Not valid status".red());
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "status" : "failed",
+                "err_msg" : "Token already used or expired",
+                "err_val" : 3,
+                "val" : false
+            }))
+        );
+    }
+    println!("{} Status ok", "[Restore/POST] :".red());
+
+    println!("{} Checking token expiricy", "[Restore/POST] :".red());
+    // solo se puede ocupar dentro del mismo dia el token generado
+    if timestamp != Utc::now().date_naive().to_string() {
+        println!("{} {}", "[Restore/POST] :".red(),"Token expired, changing status to expired".red());
+        let conn = Connection::open(&db_path).unwrap_or_else(|_| panic!("Connection failed"));
+        let update = conn.execute("UPDATE restore_token SET status=?1 WHERE token=?2", params!["expired", payload.token]);
+        match update {
+            Ok(_) => {println!("{} {}", "[Restore/POST] :".red(),"Status changed".red())},
+            Err(_) => {
+                println!("{} {}", "[Restore/POST] :".red(),"Error updating the db".red());
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({
+                        "status" : "failed",
+                        "err_msg" : "Error updating status",
+                        "err_val" : 66,
+                        "val" : false
+                    }))
+                );
+            }
+        }
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "status" : "failed",
+                "err_msg" : "Expired token",
+                "err_val" : 7,
+                "val" : false
+            }))
+        );
+    }
+    println!("{} Valid token", "[Restore/POST] :".red());
+
+    // Updating pass from the new table
+    {
+        let conn = Connection::open(&db_path).unwrap_or_else(|_| panic!("Connection failed"));
+        let mut hasher = Sha3_256::new();
+        hasher.update(payload.new_pass.as_bytes());
+        let hashed_pass = hasher.finalize();
+
+        println!("{} Changing password", "[Restore/POST] :".red());
+        let result = conn.execute("UPDATE users SET password=?1 WHERE id=?2", params![hashed_pass.as_slice(), user_id]);
+        match result {
+            Ok(_) => {
+                println!("{} Password changed", "[Restore/POST] :".red());
+                println!("{} Deleting old tokens", "[Restore/POST] :".red());
+                let deletion = conn.execute("DELETE FROM restore_token WHERE user_id=?1", params![user_id]);
+                match deletion {
+                    Ok(_) => {println!("{} Old tokens successfully deleted", "[Restore/POST] :".red());},
+                    Err(_) => {
+                        println!("{} {}", "[Restore/POST] :".red(),"The old tokens hasnt been deleted".red());
+                        return (
+                            StatusCode::UNAUTHORIZED,
+                            Json(json!({
+                                "status" : "failed",
+                                "err_msg" : "Restore password tokens not deleted",
+                                "err_val" : 5,
+                                "val" : false
+                            }))
+                        );
+                    }
+                }
+            },
+            Err(_) => {
+                println!("{} {}", "[Restore/POST] :".red(),"Token used but has not change the db, changing status to used".red());
+                let update = conn.execute("UPDATE restore_token SET status=?1 WHERE token=?2", params!["used",payload.token]);
+                match update {
+                    Ok(_) => {println!("{} {}", "[Restore/POST] :".red(),"Status changed".red())},
+                    Err(_) => {
+                        println!("{} {}", "[Restore/POST] :".red(),"Status couldnt be update to used".red());
+                        return (
+                            StatusCode::UNAUTHORIZED,
+                            Json(json!({
+                                "status" : "failed",
+                                "err_msg" : "Updating status not used",
+                                "err_val" : 6,
+                                "val" : false
+                            }))
+                        );
+                    }
+                }
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({
+                        "status" : "failed",
+                        "err_msg" : "Error at updating db",
+                        "err_val" : 4,
+                        "val" : false
+                    }))
+                );
+            }
+        }
+    }
+
+    println!("{} {}", "[Restore/POST] :".red(), "Operation completed".green());
+    return (
+        StatusCode::OK,
+        Json(json!({
+            "status" : "success",
+            "val" : true
+        }))
+    )
 }
+
+
+/* --------------------------------------------------------------------------------
+    Tool functions : Funciones que sirven principalmente como herramientas para el resto del desarrollo.
+    --------------------------------------------------------------------------------
+*/  
 
 
 pub async fn send_email(
@@ -486,7 +659,7 @@ pub async fn send_email(
 
     let html_corpse = format!("<p>Hola {},</p>\
              <p>Por favor, haz clic en el siguiente enlace para verificar tu cuenta:</p>\
-             <p><a href='{}' style='padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;'>Verificar mi cuenta</a></p>\
+             <p><a href='{}' style='padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;'>Restablecer contraseña</a></p>\
              <p>Si el botón no funciona, copia y pega esto en tu navegador: {}</p>
              <br><p><strong>En caso de que no lo hayas solicitado ignora este mensaje</strong></p>", name, url, url);
 
@@ -561,6 +734,5 @@ pub fn validate_jwt(token: &str, secret: &str) -> Result<TokenData<Claims>, Erro
     )
 }
 
-pub async fn email_send(){}
 
 
