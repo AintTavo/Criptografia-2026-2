@@ -11,7 +11,10 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 sha3 = "0.11.0"
 colored = "3.1.1"
-jsonwebtoken = {version = "10.4.0", features = ["rust_crypto"]}
+jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"]}
 chrono = "0.4.44"
 dotenvy = "0.15.7"
+lettre = { version = "0.11.22", features = ["tokio1", "aws-lc-rs", "tokio1-native-tls", "webpki-roots", "builder"] }
+url = "2.5.8"
+
 
