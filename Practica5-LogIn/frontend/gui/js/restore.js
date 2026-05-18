@@ -1,4 +1,5 @@
-const API = 'http://localhost:3000'; // Ajusta si el backend corre en otro puerto
+// Mismo origen (reverse proxy). Para desarrollo: const API = 'http://localhost:3000';
+const API = '';
 
 function $(id) { return document.getElementById(id); }
 

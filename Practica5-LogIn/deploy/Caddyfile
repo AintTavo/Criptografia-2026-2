@@ -1,0 +1,34 @@
+# Caddy v2 — crypto.eddndev.work
+# HTTPS automático (Let's Encrypt). Sirve el frontend estático y hace de
+# reverse proxy del backend Rust, todo bajo un único origen.
+#
+# Coloca el contenido de Practica5-LogIn/frontend/gui/ en /var/www/crypto-login
+# y el backend escuchando en 127.0.0.1:3000 (NO expuesto a internet).
+
+crypto.eddndev.work {
+	encode zstd gzip
+
+	root * /var/www/crypto-login
+
+	# --- API: estas rutas van al backend Rust ---
+	@api path /login /signin /val /restore /restore/init /verify
+	handle @api {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# --- Enlaces de los correos: /frontend/gui/html/... ---
+	# El backend arma URLs tipo {APP_URL}/frontend/gui/html/verify.html
+	# handle_path quita el prefijo y sirve el archivo desde la raíz.
+	handle_path /frontend/gui/* {
+		file_server
+	}
+
+	# --- Todo lo demás: frontend estático ---
+	handle {
+		file_server
+	}
+
+	log {
+		output file /var/log/caddy/crypto-login.log
+	}
+}
