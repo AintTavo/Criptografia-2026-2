@@ -1,0 +1,28 @@
+# systemd unit para el backend de la Práctica 5.
+# Instalar en /etc/systemd/system/backend_api.service
+#
+# El binario carga ./.env vía dotenvy, por eso WorkingDirectory apunta a la
+# carpeta que contiene .env y desde donde resuelve SQL_FILE_PATH=../sql/db.sql
+
+[Unit]
+Description=Practica5 LogIn backend API (Rust/Axum)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cryptosvc
+Group=cryptosvc
+WorkingDirectory=/opt/crypto-login/backend_api
+ExecStart=/opt/crypto-login/backend_api/backend_api
+Restart=on-failure
+RestartSec=3
+
+# Endurecimiento básico
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

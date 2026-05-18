@@ -1,5 +1,7 @@
 // ── Utilidades ──────────────────────────────────────────────────────────
-const API = 'http://localhost:3000';  // Mismo origen. Ajusta si tu backend corre en otro puerto, p.ej. 'http://localhost:3000'
+// Mismo origen: el reverse proxy enruta /login, /signin, etc. al backend.
+// Para desarrollo con el backend en otro puerto: const API = 'http://localhost:3000';
+const API = '';
 
 function $(id) { return document.getElementById(id); }
 
