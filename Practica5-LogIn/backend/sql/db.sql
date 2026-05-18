@@ -2,7 +2,8 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
-    password BLOB NOT NULL
+    password BLOB NOT NULL,
+    verified BOOLEAN DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS restore_token (

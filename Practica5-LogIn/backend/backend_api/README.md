@@ -30,12 +30,12 @@ Normalmente en el puerto 3000:
   password : String
 }
 
-/login [GET] {
+/login [POST] {
   email : String
   password : String
 }
 
-/val [GET] {
+/val [POST] {
   jwt : String
 }
 
@@ -45,5 +45,9 @@ Normalmente en el puerto 3000:
 
 /restore [POST] {
   new_pass: String,
+  token : String
+}
+
+/verify [POST] {
   token : String
 }
