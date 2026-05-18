@@ -6,6 +6,7 @@ use std::env;
 // Crates Externas
 // API
 use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::{get, post}};
+use tower_http::cors::{CorsLayer, Any};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -61,6 +62,11 @@ struct RestoreFinalRequest {
     token : String,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
+struct VerifyRequest {
+    token : String,
+}
+
 
 
 // Struct para JWT
@@ -112,15 +118,24 @@ async fn main() {
     }
     else {println!("{} Database already exists, skipping setup.", "[Server] :".green().bold());}
 
+    let _ = conn.execute("ALTER TABLE users ADD COLUMN verified BOOLEAN DEFAULT 0", []);
+
     conn.close().unwrap_or_else(|_| panic!("Failed to close database."));
     println!("{} Database initialized successfully.", "[Server] :".green().bold());
     
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
-        .route("/login", get(handle_request_login))
-        .route("/val", get(handle_request_val))
+        .route("/login", post(handle_request_login))
+        .route("/val", post(handle_request_val))
         .route("/signin", post(handle_request_signin))
         .route("/restore/init", post(handle_request_restore_init))
-        .route("/restore", post(handle_request_restore_post));
+        .route("/restore", post(handle_request_restore_post))
+        .route("/verify", post(handle_request_verify))
+        .layer(cors);
 
     println!("{} API function created","[Server] :".green().bold());
 
@@ -168,14 +183,20 @@ async fn handle_request_signin(Json(payload) : Json<SignInRequest>) -> impl Into
 
             match jwt {
                 Ok(token_string) => {
-                    println!("{} JWT Created Succesfully", "[Signin/POST] :".yellow());
+                    println!("{} Verification JWT Created Succesfully", "[Signin/POST] :".yellow());
+                    let app_url = env::var("APP_URL").unwrap_or("http://localhost:5500".to_string());
+                    let verify_url = format!("{}/frontend/gui/html/verify.html?token={}", app_url, token_string);
+                    let _ = send_verification_email(&payload.email, &payload.username, &verify_url).await.map_err(|e| {
+                        println!("{} SMTP ERROR: {:?}", "[Signin/POST] :".red(), e);
+                    });
+                    
                     return (StatusCode::OK, Json(json!({
                         "status" : "Success",
-                        "jwt" : token_string
+                        "msg" : "Revisa tu correo para verificar tu cuenta"
                     })));
                 },
                 Err(_) => {
-                    println!("{} JWT was not created", "[Signin/POST] :".yellow());
+                    println!("{} Verification JWT was not created", "[Signin/POST] :".yellow());
                     error_response = "Error creating the JWT".to_string();
                 }
             }
@@ -197,12 +218,12 @@ async fn handle_request_signin(Json(payload) : Json<SignInRequest>) -> impl Into
 
 // -> Request for log in
 async fn handle_request_login(Json(payload) : Json<LogInRequest>) -> impl IntoResponse {
-    println!("{} Processing log in request", "[Login/GET] :".blue());
+    println!("{} Processing log in request", "[Login/POST] :".blue());
     let db_file = env::var("DATABASE_FILE").expect("Error: DATABASE_FILE not defined in .env");
     let conn = Connection::open(db_file).unwrap_or_else(|_| panic!("Connection failed"));
-    println!("{} Connection opened with SQLite db", "[Login/GET] :".blue());
+    println!("{} Connection opened with SQLite db", "[Login/POST] :".blue());
 
-    let mut stmt = conn.prepare("SELECT email, password FROM users WHERE email = ?1").unwrap_or_else(|_| panic!("Error building the query"));
+    let mut stmt = conn.prepare("SELECT email, password, verified FROM users WHERE email = ?1").unwrap_or_else(|_| panic!("Error building the query"));
     let mut rows = stmt.query(params![payload.email]).unwrap();
     let error_response : String;
     
@@ -210,6 +231,17 @@ async fn handle_request_login(Json(payload) : Json<LogInRequest>) -> impl IntoRe
         Ok(Some(row)) => {
             let email: String = row.get(0).unwrap();
             let password: Vec<u8> = row.get(1).unwrap();
+            let verified: bool = row.get(2).unwrap_or(false);
+
+            if !verified {
+                println!("{} Account not verified", "[Login/POST] :".blue());
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({
+                        "status" : "failed",
+                        "msg_err" : "Por favor verifica tu correo electrónico antes de iniciar sesión."
+                    })));
+            }
 
             let mut hasher = Sha3_256::new();
             hasher.update(payload.password.as_bytes());
@@ -263,11 +295,11 @@ async fn handle_request_login(Json(payload) : Json<LogInRequest>) -> impl IntoRe
 
 // -> Request for token validation
 async fn handle_request_val(Json(payload) : Json<ValRequest>) -> impl IntoResponse {
-    println!("{} Processing token val request", "[Val/GET] :".purple());
+    println!("{} Processing token val request", "[Val/POST] :".purple());
 
     let error_response : String;
 
-    println!("{} Loading secreat from JWT_SECRET", "[Val/GET] :".purple());
+    println!("{} Loading secreat from JWT_SECRET", "[Val/POST] :".purple());
     let secret = env::var("JWT_SECRET").expect("Error: JWT_SECRET not defined in .env");
     let token = payload.jwt;
     
@@ -391,8 +423,8 @@ async fn handle_request_restore_init(
                 match result {
                     Ok(_) =>{
                         println!("{}  Token successfully added to db", "[Restore/GET] :".red());
-                        let url_app = env::var("APP_URL").expect("APP_URL not defined in .env");
-                        restore_url = format!("{}/restore?token={}", url_app, jwt);
+                        let url_app = env::var("APP_URL").unwrap_or("http://localhost:5500".to_string());
+                        restore_url = format!("{}/frontend/gui/html/restore.html?token={}", url_app, jwt);
                         println!("{} URL for restoring data successfully created", "[Restore/GET] :".red());
                     },
                     Err(_) => {
@@ -434,7 +466,8 @@ async fn handle_request_restore_init(
         Ok(_) => {
             println!("{} Email sended succesfully", "[Restore/GET] :".red());
         },
-        Err(_) => {
+        Err(e) => {
+            println!("{} SMTP ERROR: {:?}", "[Restore/GET] :".red(), e);
             error_val = 5;
             error_response = "An error ocurred while sending the email".to_string();
             println!("{} {}", "[Restore/GET] :".red(), "Email was not send".red());
@@ -637,6 +670,46 @@ async fn handle_request_restore_post(Json(payload) : Json<RestoreFinalRequest> )
 }
 
 
+// -> Request for account verification
+async fn handle_request_verify(Json(payload) : Json<VerifyRequest>) -> impl IntoResponse {
+    println!("{} Processing verify request", "[Verify/POST] :".green());
+    let db_path = env::var("DATABASE_FILE").expect("DATABASE_FILE not defined in .env");
+    let secret = env::var("JWT_SECRET").expect("JWT_SECRET not defined in .env");
+
+    let val_result = validate_jwt(&payload.token, &secret);
+    
+    match val_result {
+        Ok(token_data) => {
+            let email = token_data.claims.sub;
+            let conn = Connection::open(&db_path).unwrap_or_else(|_| panic!("Connection failed"));
+            let result = conn.execute("UPDATE users SET verified=1 WHERE email=?1", params![email]);
+            
+            if result.is_ok() {
+                println!("{} Account verified successfully", "[Verify/POST] :".green());
+                return (
+                    StatusCode::OK,
+                    Json(json!({
+                        "status" : "success",
+                        "msg" : "Cuenta verificada correctamente"
+                    }))
+                );
+            }
+        },
+        Err(_) => {
+            println!("{} The token is invalid or expired", "[Verify/POST] :".green());
+        }
+    }
+    
+    return (
+        StatusCode::UNAUTHORIZED,
+        Json(json!({
+            "status" : "failed",
+            "err_msg" : "Token inválido o expirado",
+            "val" : false
+        }))
+    );
+}
+
 /* --------------------------------------------------------------------------------
     Tool functions : Funciones que sirven principalmente como herramientas para el resto del desarrollo.
     --------------------------------------------------------------------------------
@@ -674,9 +747,61 @@ pub async fn send_email(
 
     let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp_server)?
         .credentials(creds)
+        .timeout(Some(std::time::Duration::from_secs(10)))
         .build();
 
-    mailer.send(email).await?;
+    match tokio::time::timeout(std::time::Duration::from_secs(10), mailer.send(email)).await {
+        Ok(res) => { res?; },
+        Err(_) => {
+            println!("{} SMTP ERROR: Connection timed out after 10 seconds. Possibly a firewall or TLS issue.", "[Restore/GET] :".red());
+            return Err("SMTP Timeout".into());
+        }
+    }
+    
+    Ok(())
+}
+
+pub async fn send_verification_email(
+    email : &str,
+    name : &str,
+    url : &str
+) -> Result<(), Box<dyn std::error::Error>> {
+    let url = Url::parse(url).expect("URL in existente");
+
+    let smtp_server = env::var("SMTP_SERVER").expect("SMTP_SERVER not defined in .env");
+    let smtp_user = env::var("SMTP_USER").expect("SMTP_USER not defined in .env");
+    let smtp_pass = env::var("SMTP_PASS").expect("SMTP_PASS not defined in .env");
+
+    let remitent = format!("SYS://SECURE <{}>", smtp_user);
+    let destinatary = format!("{} <{}>", name, email);
+
+    let html_corpse = format!("<p>Hola {},</p>\
+             <p>Gracias por registrarte. Por favor, verifica tu cuenta dando clic en el siguiente enlace:</p>\
+             <p><a href='{}' style='padding: 10px 20px; background-color: #00ffcc; color: black; text-decoration: none; border-radius: 5px;'>Verificar Cuenta</a></p>\
+             <p>Si el botón no funciona, copia y pega esto en tu navegador: {}</p>
+             <br><p><strong>En caso de que no te hayas registrado, ignora este mensaje.</strong></p>", name, url, url);
+
+    let email = Message::builder()
+        .from(remitent.parse()?)
+        .to(destinatary.parse()?)
+        .subject("Verifica tu cuenta en SYS://SECURE")
+        .header(lettre::message::header::ContentType::TEXT_HTML)
+        .body(html_corpse)?;
+    
+    let creds = Credentials::new(smtp_user,smtp_pass);
+
+    let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp_server)?
+        .credentials(creds)
+        .timeout(Some(std::time::Duration::from_secs(10)))
+        .build();
+
+    match tokio::time::timeout(std::time::Duration::from_secs(10), mailer.send(email)).await {
+        Ok(res) => { res?; },
+        Err(_) => {
+            println!("{} SMTP ERROR: Connection timed out after 10 seconds. Possibly a firewall or TLS issue.", "[Restore/GET] :".red());
+            return Err("SMTP Timeout".into());
+        }
+    }
     
     Ok(())
 }

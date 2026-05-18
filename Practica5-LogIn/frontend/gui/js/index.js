@@ -1,5 +1,5 @@
 // ── Utilidades ──────────────────────────────────────────────────────────
-const API = '';  // Mismo origen. Ajusta si tu backend corre en otro puerto, p.ej. 'http://localhost:3000'
+const API = 'http://localhost:3000';  // Mismo origen. Ajusta si tu backend corre en otro puerto, p.ej. 'http://localhost:3000'
 
 function $(id) { return document.getElementById(id); }
 
@@ -51,7 +51,7 @@ function getJWT() {
   if (!jwt) return;
   try {
     const res = await fetch(`${API}/val`, {
-      method: 'GET',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jwt })
     });
@@ -114,7 +114,7 @@ async function doLogin() {
   setLoading('btn-login', true);
   try {
     const res = await fetch(`${API}/login`, {
-      method: 'GET',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: pass })
     });
@@ -155,10 +155,9 @@ async function doSignin() {
       body: JSON.stringify({ username: user, email, password: pass })
     });
     const data = await res.json();
-    if (res.ok && data.jwt) {
-      saveJWT(data.jwt);
-      showToast('✓ Cuenta creada. Redirigiendo…', 'success');
-      setTimeout(() => { window.location.href = './html/secret.html'; }, 1000);
+    if (res.ok) {
+      showToast('✓ Cuenta creada. Revisa tu correo para verificarla.', 'success', 5000);
+      setTimeout(() => { setMode('login'); }, 3000); // Regresa a la pestaña de login
     } else {
       showToast(data.msg_err || 'Error al crear la cuenta', 'error');
     }
@@ -185,13 +184,15 @@ async function doRestore() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       showToast('✉ Enlace enviado a tu correo', 'success');
       closeRestore();
       $('r-email').value = '';
     } else {
-      showToast('No se encontró el correo', 'error');
-      showError('r-email', 'Correo no registrado');
+      const errorMsg = data.err_msg || 'Error al enviar el correo';
+      showToast(errorMsg, 'error');
+      showError('r-email', errorMsg);
     }
   } catch {
     showToast('Error de conexión con el servidor', 'error');
