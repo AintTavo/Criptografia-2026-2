@@ -1,2 +1,5 @@
 target/
 .env
+
+# Base de datos SQLite generada en tiempo de ejecución (despliegue limpio)
+*.db

@@ -5,7 +5,7 @@ use std::env;
 
 // Crates Externas
 // API
-use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::{get, post}};
+use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::post};
 use tower_http::cors::{CorsLayer, Any};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -28,6 +28,9 @@ use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, AsyncSmtpTransport, AsyncTransport, Tokio1Executor};
 
 use url::Url;
+
+// Cryptographically secure RNG for salts and opaque recovery tokens
+use rand::RngCore;
 
 
 // -> Structs for requests
@@ -77,15 +80,7 @@ pub struct Claims {
     pub iat: usize,     // Tiempo de creación
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RestoreClaims {
-    pub email : i32,
-    pub pass : Vec<u8>,
-    pub exp : usize,
-    pub iat : usize,
-}
-
-/*  
+/*
     --------------------------------------------------------------------------------
       Function Main
     --------------------------------------------------------------------------------
@@ -119,6 +114,25 @@ async fn main() {
     else {println!("{} Database already exists, skipping setup.", "[Server] :".green().bold());}
 
     let _ = conn.execute("ALTER TABLE users ADD COLUMN verified BOOLEAN DEFAULT 0", []);
+    // Per-user random salt for password hashing (legacy rows get NULL -> require reset)
+    let _ = conn.execute("ALTER TABLE users ADD COLUMN salt BLOB", []);
+
+    // Recovery tokens are ephemeral: rebuild the table so the hardened schema
+    // (opaque hashed token + real expiry) always applies, even on an old DB.
+    conn.execute("DROP TABLE IF EXISTS restore_token", [])
+        .unwrap_or_else(|_| panic!("Failed to drop restore_token."));
+    conn.execute(
+        "CREATE TABLE restore_token (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            expires_at INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )",
+        [],
+    )
+    .unwrap_or_else(|_| panic!("Failed to create restore_token."));
 
     conn.close().unwrap_or_else(|_| panic!("Failed to close database."));
     println!("{} Database initialized successfully.", "[Server] :".green().bold());
@@ -165,13 +179,12 @@ async fn handle_request_signin(Json(payload) : Json<SignInRequest>) -> impl Into
     let conn = Connection::open(db_file).unwrap_or_else(|_| panic!("Connection failed"));
     println!("{} Conexion opened with SQLite db", "[Signin/POST] :".yellow());
 
-    let mut hasher = Sha3_256::new();
-    hasher.update(payload.password.as_bytes());
-    let hashed_pass = hasher.finalize();
+    let salt = generate_salt();
+    let hashed_pass = hash_password(&salt, &payload.password);
 
     let result = conn.execute(
-        "INSERT INTO users (username, email, password) VALUES (?1, ?2, ?3)", 
-        params![payload.username, payload.email, hashed_pass.as_slice()],
+        "INSERT INTO users (username, email, password, salt) VALUES (?1, ?2, ?3, ?4)",
+        params![payload.username, payload.email, hashed_pass.as_slice(), salt.as_slice()],
     );
  
 
@@ -223,7 +236,7 @@ async fn handle_request_login(Json(payload) : Json<LogInRequest>) -> impl IntoRe
     let conn = Connection::open(db_file).unwrap_or_else(|_| panic!("Connection failed"));
     println!("{} Connection opened with SQLite db", "[Login/POST] :".blue());
 
-    let mut stmt = conn.prepare("SELECT email, password, verified FROM users WHERE email = ?1").unwrap_or_else(|_| panic!("Error building the query"));
+    let mut stmt = conn.prepare("SELECT email, password, verified, salt FROM users WHERE email = ?1").unwrap_or_else(|_| panic!("Error building the query"));
     let mut rows = stmt.query(params![payload.email]).unwrap();
     let error_response : String;
     
@@ -232,6 +245,7 @@ async fn handle_request_login(Json(payload) : Json<LogInRequest>) -> impl IntoRe
             let email: String = row.get(0).unwrap();
             let password: Vec<u8> = row.get(1).unwrap();
             let verified: bool = row.get(2).unwrap_or(false);
+            let salt: Option<Vec<u8>> = row.get(3).unwrap_or(None);
 
             if !verified {
                 println!("{} Account not verified", "[Login/POST] :".blue());
@@ -243,13 +257,22 @@ async fn handle_request_login(Json(payload) : Json<LogInRequest>) -> impl IntoRe
                     })));
             }
 
-            let mut hasher = Sha3_256::new();
-            hasher.update(payload.password.as_bytes());
-            let hashed_pass = hasher.finalize();
+            let salt = match salt {
+                Some(s) => s,
+                None => {
+                    println!("{} Legacy account without salt, password reset required", "[Login/POST] :".blue());
+                    return (
+                        StatusCode::UNAUTHORIZED,
+                        Json(json!({
+                            "status" : "failed",
+                            "msg_err" : "Esta cuenta requiere restablecer la contraseña."
+                        })));
+                }
+            };
 
-            let hashed_pass_vec = hashed_pass.as_slice();
+            let hashed_pass = hash_password(&salt, &payload.password);
 
-            if password == hashed_pass_vec {
+            if password == hashed_pass {
                 println!("{} The password is correct", "[Login/GET] :".blue());
                 println!("{} Creating JWT", "[Login/GET] :".blue());
                 let secret = env::var("JWT_SECRET").expect("Error: JWT_SECRET not defined in .env");
@@ -358,26 +381,24 @@ async fn handle_request_restore_init(
     let error_response : String;
 
     let db_file = env::var("DATABASE_FILE").expect("Error: DATABASE_FILE not defined in .env");
-    let unique_jwt : Option<String>;
+    // Raw opaque token goes in the email; only its hash is ever stored.
+    let raw_token : String = generate_opaque_token();
+    let token_hash : String = sha3_hex(raw_token.as_bytes());
     let user_id : i32;
     let username : String;
     let restore_url : String;
-    
+
     {
         let conn = Connection::open(db_file).unwrap_or_else(|_| panic!("Connection failed"));
-        let mut stmt = conn.prepare("SELECT id,username,password FROM users WHERE email = ?1").unwrap_or_else(|_| panic!("Error building the query"));
+        let mut stmt = conn.prepare("SELECT id,username FROM users WHERE email = ?1").unwrap_or_else(|_| panic!("Error building the query"));
         let mut results = stmt.query(params![payload.email]).unwrap();
-        
-    
+
+
         println!("{} Gathering the data to create the restore token", "[Restore/GET] :".red());
         match results.next() {
-            Ok(Some(row)) => { 
+            Ok(Some(row)) => {
                 user_id = row.get(0).unwrap();
                 username = row.get(1).unwrap();
-                let pass : Vec<u8> = row.get(2).unwrap();
-                let secret = env::var("JWT_SECRET").expect("JWT_SECRET is not defined in .env");
-                let jwt = generate_jwt_for_restore(&user_id, &pass, &secret).unwrap();
-                unique_jwt = Some(jwt);
                 println!("{} Restore token created successfully", "[Restore/GET] :".red());
             },
             Ok(None) => {
@@ -413,40 +434,28 @@ async fn handle_request_restore_init(
         drop(results);
         drop(stmt);
     
-        match unique_jwt {
-            Some(jwt) => {
-                let result = conn.execute(
-                    "INSERT INTO restore_token (user_id, token, timestamp, status) VALUES (?1, ?2, ?3, ?4)", 
-                    params![user_id, jwt, Utc::now().date_naive().to_string(), "pending"]
-                );
-                println!("{} Adding token to db", "[Restore/GET] :".red());
-                match result {
-                    Ok(_) =>{
-                        println!("{}  Token successfully added to db", "[Restore/GET] :".red());
-                        let url_app = env::var("APP_URL").unwrap_or("http://localhost:5500".to_string());
-                        restore_url = format!("{}/frontend/gui/html/restore.html?token={}", url_app, jwt);
-                        println!("{} URL for restoring data successfully created", "[Restore/GET] :".red());
-                    },
-                    Err(_) => {
-                        error_val = 4;
-                        error_response = "The token has not been added to the db".to_string();
-                        println!("{} {}", "[Restore/GET] :".red(), "Token was not added to db".red());
-                        return (
-                          StatusCode::UNAUTHORIZED,
-                          Json(json!({
-                              "status" : "failed",
-                              "err_val" : error_val,
-                              "err_msg" : error_response,
-                              "val" : false
-                          }))
-                        );
-                    }
-                }
+        // Token valid for 1 hour, stored hashed so a DB/email leak is not usable.
+        let expires_at = Utc::now()
+            .checked_add_signed(Duration::hours(1))
+            .expect("valid timestamp")
+            .timestamp();
+
+        let result = conn.execute(
+            "INSERT INTO restore_token (user_id, token_hash, expires_at, status) VALUES (?1, ?2, ?3, ?4)",
+            params![user_id, token_hash, expires_at, "pending"]
+        );
+        println!("{} Adding token to db", "[Restore/GET] :".red());
+        match result {
+            Ok(_) =>{
+                println!("{}  Token successfully added to db", "[Restore/GET] :".red());
+                let url_app = env::var("APP_URL").unwrap_or("http://localhost:5500".to_string());
+                restore_url = format!("{}/frontend/gui/html/restore.html?token={}", url_app, raw_token);
+                println!("{} URL for restoring data successfully created", "[Restore/GET] :".red());
             },
-            None => {
-                error_val = 3;
-                error_response = "Restore token was not created".to_string();
-                println!("{} {}", "[Restore/GET] :".red(), "JWT was not created in previous steps".red());
+            Err(_) => {
+                error_val = 4;
+                error_response = "The token has not been added to the db".to_string();
+                println!("{} {}", "[Restore/GET] :".red(), "Token was not added to db".red());
                 return (
                   StatusCode::UNAUTHORIZED,
                   Json(json!({
@@ -502,19 +511,21 @@ async fn handle_request_restore_post(Json(payload) : Json<RestoreFinalRequest> )
     println!("{} Processing restore request", "[Restore/POST] :".red());
     let user_id : i32;
     let status : String;
-    let timestamp : String;
+    let expires_at : i64;
     let db_path = env::var("DATABASE_FILE").expect("DATABASE_FILE not defined in .env");
+    // Look the token up by its hash; the raw value is never stored.
+    let token_hash : String = sha3_hex(payload.token.as_bytes());
 
     // Obtaining id from the table restore_token
     {
         let conn = Connection::open(&db_path).unwrap_or_else(|_| panic!("Connection failed"));
-        let mut stmt = conn.prepare("SELECT user_id,timestamp,status FROM restore_token WHERE token=?1").unwrap_or_else(|_| panic!("Error building the query"));
-        let mut results = stmt.query(params![payload.token]).unwrap();
+        let mut stmt = conn.prepare("SELECT user_id,expires_at,status FROM restore_token WHERE token_hash=?1").unwrap_or_else(|_| panic!("Error building the query"));
+        let mut results = stmt.query(params![token_hash]).unwrap();
 
         match results.next() {
             Ok(Some(row)) => {
                 user_id = row.get(0).unwrap();
-                timestamp = row.get(1).unwrap();
+                expires_at = row.get(1).unwrap();
                 status = row.get(2).unwrap();
                 println!("{} Necessary data in db acquired", "[Restore/POST] :".red());
             },
@@ -566,11 +577,11 @@ async fn handle_request_restore_post(Json(payload) : Json<RestoreFinalRequest> )
     println!("{} Status ok", "[Restore/POST] :".red());
 
     println!("{} Checking token expiricy", "[Restore/POST] :".red());
-    // solo se puede ocupar dentro del mismo dia el token generado
-    if timestamp != Utc::now().date_naive().to_string() {
+    // El token caduca 1 hora después de generado (expires_at en unix timestamp).
+    if Utc::now().timestamp() > expires_at {
         println!("{} {}", "[Restore/POST] :".red(),"Token expired, changing status to expired".red());
         let conn = Connection::open(&db_path).unwrap_or_else(|_| panic!("Connection failed"));
-        let update = conn.execute("UPDATE restore_token SET status=?1 WHERE token=?2", params!["expired", payload.token]);
+        let update = conn.execute("UPDATE restore_token SET status=?1 WHERE token_hash=?2", params!["expired", token_hash]);
         match update {
             Ok(_) => {println!("{} {}", "[Restore/POST] :".red(),"Status changed".red())},
             Err(_) => {
@@ -601,12 +612,12 @@ async fn handle_request_restore_post(Json(payload) : Json<RestoreFinalRequest> )
     // Updating pass from the new table
     {
         let conn = Connection::open(&db_path).unwrap_or_else(|_| panic!("Connection failed"));
-        let mut hasher = Sha3_256::new();
-        hasher.update(payload.new_pass.as_bytes());
-        let hashed_pass = hasher.finalize();
+        // New random salt on every password change.
+        let salt = generate_salt();
+        let hashed_pass = hash_password(&salt, &payload.new_pass);
 
         println!("{} Changing password", "[Restore/POST] :".red());
-        let result = conn.execute("UPDATE users SET password=?1 WHERE id=?2", params![hashed_pass.as_slice(), user_id]);
+        let result = conn.execute("UPDATE users SET password=?1, salt=?2 WHERE id=?3", params![hashed_pass.as_slice(), salt.as_slice(), user_id]);
         match result {
             Ok(_) => {
                 println!("{} Password changed", "[Restore/POST] :".red());
@@ -630,7 +641,7 @@ async fn handle_request_restore_post(Json(payload) : Json<RestoreFinalRequest> )
             },
             Err(_) => {
                 println!("{} {}", "[Restore/POST] :".red(),"Token used but has not change the db, changing status to used".red());
-                let update = conn.execute("UPDATE restore_token SET status=?1 WHERE token=?2", params!["used",payload.token]);
+                let update = conn.execute("UPDATE restore_token SET status=?1 WHERE token_hash=?2", params!["used", token_hash]);
                 match update {
                     Ok(_) => {println!("{} {}", "[Restore/POST] :".red(),"Status changed".red())},
                     Err(_) => {
@@ -827,24 +838,44 @@ pub fn generate_jwt(user_id: &str, secret: &str) -> Result<String, Error> {
 }
 
 
-pub fn generate_jwt_for_restore(user_id: &i32, user_secret: &[u8], secret: &str) -> Result<String, Error> {
-    let expiration = Utc::now()
-        .checked_add_signed(Duration::hours(4))
-        .expect("valid timestamp")
-        .timestamp();
+// -> Crypto helpers for salting and opaque tokens
 
-    let claims = RestoreClaims {
-        email: user_id.to_owned(),
-        pass: user_secret.to_owned(),
-        iat: Utc::now().timestamp() as usize,
-        exp: expiration as usize,
-    };
+/// 16 random bytes used as a per-user password salt.
+pub fn generate_salt() -> Vec<u8> {
+    let mut salt = [0u8; 16];
+    rand::rng().fill_bytes(&mut salt);
+    salt.to_vec()
+}
 
-    encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    )
+/// 32 random bytes hex-encoded: the raw recovery token sent in the email.
+pub fn generate_opaque_token() -> String {
+    let mut buf = [0u8; 32];
+    rand::rng().fill_bytes(&mut buf);
+    to_hex(&buf)
+}
+
+/// SHA3-256(salt || password) -> 32 bytes. Stored in users.password.
+pub fn hash_password(salt: &[u8], password: &str) -> Vec<u8> {
+    let mut hasher = Sha3_256::new();
+    hasher.update(salt);
+    hasher.update(password.as_bytes());
+    hasher.finalize().to_vec()
+}
+
+/// Hex-encoded SHA3-256 digest; used to store recovery tokens hashed.
+pub fn sha3_hex(input: &[u8]) -> String {
+    let mut hasher = Sha3_256::new();
+    hasher.update(input);
+    to_hex(&hasher.finalize())
+}
+
+fn to_hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        let _ = write!(s, "{:02x}", b);
+    }
+    s
 }
 
 // Función para validar el JWT
