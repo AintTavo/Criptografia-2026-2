@@ -737,8 +737,9 @@ pub async fn send_email(
     let smtp_server = env::var("SMTP_SERVER").expect("SMTP_SERVER not defined in .env");
     let smtp_user = env::var("SMTP_USER").expect("SMTP_USER not defined in .env");
     let smtp_pass = env::var("SMTP_PASS").expect("SMTP_PASS not defined in .env");
+    let smtp_from = env::var("SMTP_FROM").unwrap_or_else(|_| smtp_user.clone());
 
-    let remitent = format!("Example API of login and restore <{}>", smtp_user);
+    let remitent = format!("Example API of login and restore <{}>", smtp_from);
     let destinatary = format!("{} <{}>", name, email);
 
     let html_corpse = format!("<p>Hola {},</p>\
@@ -782,8 +783,9 @@ pub async fn send_verification_email(
     let smtp_server = env::var("SMTP_SERVER").expect("SMTP_SERVER not defined in .env");
     let smtp_user = env::var("SMTP_USER").expect("SMTP_USER not defined in .env");
     let smtp_pass = env::var("SMTP_PASS").expect("SMTP_PASS not defined in .env");
+    let smtp_from = env::var("SMTP_FROM").unwrap_or_else(|_| smtp_user.clone());
 
-    let remitent = format!("\"SYS://SECURE\" <{}>", smtp_user);
+    let remitent = format!("\"SYS://SECURE\" <{}>", smtp_from);
     let destinatary = format!("{} <{}>", name, email);
 
     let html_corpse = format!("<p>Hola {},</p>\
