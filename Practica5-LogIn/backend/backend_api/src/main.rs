@@ -783,7 +783,7 @@ pub async fn send_verification_email(
     let smtp_user = env::var("SMTP_USER").expect("SMTP_USER not defined in .env");
     let smtp_pass = env::var("SMTP_PASS").expect("SMTP_PASS not defined in .env");
 
-    let remitent = format!("SYS://SECURE <{}>", smtp_user);
+    let remitent = format!("\"SYS://SECURE\" <{}>", smtp_user);
     let destinatary = format!("{} <{}>", name, email);
 
     let html_corpse = format!("<p>Hola {},</p>\
