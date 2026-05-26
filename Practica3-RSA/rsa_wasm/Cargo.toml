@@ -1,0 +1,8 @@
+[package]
+name = "rsa_wasm"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rsa = "0.9.10"
+rand = "0.8"
